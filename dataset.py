@@ -24,7 +24,7 @@ class EnableDataset(Dataset):
 
     def __getitem__(self, idx):
         # TODO Make this load the img from disk
-        return self.img_data[idx], self.labels[idx]
+        return torch.from_numpy(self.img_data[idx]), torch.from_numpy(self.labels[idx])
 
     # Returns segmented_data, labels
     # segmented_data is numpy array of dimension: (<number of segments> X <window size> X <number of columns>)
