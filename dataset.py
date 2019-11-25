@@ -2,10 +2,11 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 import cv2
-from scipy import signal
+from scipy import signal, stats
 import matplotlib
 matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
+
 import pandas as pd
 import numpy as np
 
@@ -96,21 +97,29 @@ class EnableDataset(Dataset):
             for x in range(3):
                 row = segmented_data[y,:,x]
                 f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(100, True), noverlap=50)
+                tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
+                Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
+                Sxx = Sxx/np.max(Sxx)*255
                 vals1.append(Sxx)
             vals2 = []
             for x in range(6,9):
                 row = segmented_data[y,:,x]
                 f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(100, True), noverlap=50)
+                tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
+                Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
+                Sxx = Sxx/np.max(Sxx)*255
                 vals2.append(Sxx)
 
             out1 = np.stack(vals1, axis=2)
             out2 = np.stack(vals2, axis=2)
             out = np.hstack((out1, out2))
             #out = 20*np.log10(np.abs(out)/1000000000000000000)
-            out = out-np.min(out)
-            out = np.flipud(out/np.max(out)*255)
+            #out = out-np.min(out)
+            #out = np.flipud(out/np.max(out)*255)
             #print(np.min(out), np.max(out))
-            #plt.imshow(out.astype(np.uint8))
+            out = np.flipud(out)
+            ret.append(out.astype(np.uint8))
+            #plt.imshow(out[:,:,0].astype(np.uint8))
             #plt.show()
         ret = np.stack(ret)
         #print(ret.shape)
