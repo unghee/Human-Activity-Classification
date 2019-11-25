@@ -15,7 +15,7 @@ class EnableDataset(Dataset):
         raw_data = pd.read_csv(file_path)
         segmented_data, labels = self.segment_data(raw_data)
         print(segmented_data.shape)
-        self.img_data = self.spectrogram(segmented_data) # TODO: Convert raw numerical data to spectrogram images
+        self.img_data = self.spectrogram2(segmented_data) # TODO: Convert raw numerical data to spectrogram images
         self.transform = transform
 
     def __len__(self):
@@ -88,7 +88,33 @@ class EnableDataset(Dataset):
         ret = np.stack(ret)
         print(ret.shape)
         return ret
+    
+    def spectrogram2(self, segmented_data, fs=500):
+        ret = []
+        for y in range(segmented_data.shape[0]):
+            vals1 = []
+            for x in range(3):
+                row = segmented_data[y,:,x]
+                f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(100, True), noverlap=50)
+                vals1.append(Sxx)
+            vals2 = []
+            for x in range(6,9):
+                row = segmented_data[y,:,x]
+                f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(100, True), noverlap=50)
+                vals2.append(Sxx)
 
+            out1 = np.stack(vals1, axis=2)
+            out2 = np.stack(vals2, axis=2)
+            out = np.hstack((out1, out2))
+            #out = 20*np.log10(np.abs(out)/1000000000000000000)
+            out = out-np.min(out)
+            out = np.flipud(out/np.max(out)*255)
+            #print(np.min(out), np.max(out))
+            #plt.imshow(out.astype(np.uint8))
+            #plt.show()
+        ret = np.stack(ret)
+        #print(ret.shape)
+        return ret
 
 
 dataset = EnableDataset('AB191_Circuit_001_raw.csv')
