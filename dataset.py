@@ -1,15 +1,21 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
-
+import cv2
+from scipy import signal
+import matplotlib
+matplotlib.use('TkAgg')
+from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
+
 
 class EnableDataset(Dataset):
     def __init__(self, file_path, transform=None):
         raw_data = pd.read_csv(file_path)
         segmented_data, labels = self.segment_data(raw_data)
-        self.img_data = None # TODO: Convert raw numerical data to spectrogram images
+        print(segmented_data.shape)
+        self.img_data = self.spectrogram(segmented_data) # TODO: Convert raw numerical data to spectrogram images
         self.transform = transform
 
     def __len__(self):
@@ -36,5 +42,54 @@ class EnableDataset(Dataset):
             data = np.expand_dims(raw_data.loc[i:i+window_size-1, 'Right_Shank_Ax':'Left_Knee'], axis=0)
             segmented_data = np.concatenate((segmented_data, data), axis=0)
         return segmented_data, labels
+    
+    def spectrogram(self, segmented_data, fs=500):
+        ret = []
+        for y in range(segmented_data.shape[0]):
+            vals1 = []
+            for x in range(3):
+                row = segmented_data[y,:,x]
+                f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(100, True), noverlap=50)
+                fig = plt.figure()
+                ax = fig.add_axes([0.,0.,1.,1.])
+                fig.set_size_inches((5,5))
+                ax.pcolormesh(t, f, Sxx, cmap='gray')
+                ax.axis('off')
+                fig.add_axes(ax)
+                fig.canvas.draw()
+                # this rasterized the figure
+                X = np.array(fig.canvas.renderer._renderer)
+                X = 0.2989*X[:,:,1] + 0.5870*X[:,:,2] + 0.1140*X[:,:,3]
+                vals1.append(X)
+                plt.close()
+            vals2 = []
+            for x in range(6,9):
+                row = segmented_data[y,:,x]
+                f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(100, True), noverlap=50)
+                fig = plt.figure()
+                ax = fig.add_axes([0.,0.,1.,1.])
+                fig.set_size_inches((5,5))
+                ax.pcolormesh(t, f, Sxx, cmap='gray')
+                ax.axis('off')
+                fig.add_axes(ax)
+                fig.canvas.draw()
+                # this rasterized the figure
+                X = np.array(fig.canvas.renderer._renderer)
+                X = 0.2989*X[:,:,1] + 0.5870*X[:,:,2] + 0.1140*X[:,:,3]
+                vals2.append(X)
+                plt.close()
 
-dataset = EnableDataset('AB156_Circuit_001_raw.csv')
+            out1 = np.stack(vals1, axis=2).astype(np.uint8)
+            out2 = np.stack(vals2, axis=2).astype(np.uint8)
+            out = np.hstack((out1, out2))
+            ret.append(out)
+            cv2.imshow("ret", out)
+            cv2.waitKey(0)
+        ret = np.stack(ret)
+        print(ret.shape)
+        return ret
+
+
+
+dataset = EnableDataset('AB191_Circuit_001_raw.csv')
+dataset
