@@ -14,7 +14,7 @@ import numpy as np
 class EnableDataset(Dataset):
     def __init__(self, file_path, transform=None):
         raw_data = pd.read_csv(file_path)
-        segmented_data, labels = self.segment_data(raw_data)
+        segmented_data, self.labels = self.segment_data(raw_data)
         print(segmented_data.shape)
         self.img_data = self.spectrogram2(segmented_data) # TODO: Convert raw numerical data to spectrogram images
         self.transform = transform
@@ -24,7 +24,7 @@ class EnableDataset(Dataset):
 
     def __getitem__(self, idx):
         # TODO Make this load the img from disk
-        return self.img_data[idx]
+        return self.img_data[idx], self.labels[idx]
 
     # Returns segmented_data, labels
     # segmented_data is numpy array of dimension: (<number of segments> X <window size> X <number of columns>)
@@ -43,7 +43,7 @@ class EnableDataset(Dataset):
             data = np.expand_dims(raw_data.loc[i:i+window_size-1, 'Right_Shank_Ax':'Left_Knee'], axis=0)
             segmented_data = np.concatenate((segmented_data, data), axis=0)
         return segmented_data, labels
-    
+
     def spectrogram(self, segmented_data, fs=500):
         ret = []
         for y in range(segmented_data.shape[0]):
@@ -89,7 +89,7 @@ class EnableDataset(Dataset):
         ret = np.stack(ret)
         print(ret.shape)
         return ret
-    
+
     def spectrogram2(self, segmented_data, fs=500):
         ret = []
         for y in range(segmented_data.shape[0]):
