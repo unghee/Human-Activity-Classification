@@ -15,16 +15,14 @@ class EnableDataset(Dataset):
     def __init__(self, file_path, transform=None):
         raw_data = pd.read_csv(file_path)
         segmented_data, self.labels = self.segment_data(raw_data)
-        print(segmented_data.shape)
-        self.img_data = self.spectrogram2(segmented_data) # TODO: Convert raw numerical data to spectrogram images
+        self.img_data = self.spectrogram2(segmented_data)
         self.transform = transform
 
     def __len__(self):
-        return len(self.img_data)
+        return self.img_data.shape[0]
 
     def __getitem__(self, idx):
-        # TODO Make this load the img from disk
-        return torch.from_numpy(self.img_data[idx]), torch.from_numpy(self.labels[idx])
+        return self.img_data[idx], self.labels[idx]
 
     # Returns segmented_data, labels
     # segmented_data is numpy array of dimension: (<number of segments> X <window size> X <number of columns>)
@@ -87,7 +85,7 @@ class EnableDataset(Dataset):
             cv2.imshow("ret", out)
             cv2.waitKey(0)
         ret = np.stack(ret)
-        print(ret.shape)
+        # print(ret.shape)
         return ret
 
     def spectrogram2(self, segmented_data, fs=500):
@@ -124,7 +122,3 @@ class EnableDataset(Dataset):
         ret = np.stack(ret)
         #print(ret.shape)
         return ret
-
-
-dataset = EnableDataset('AB191_Circuit_001_raw.csv')
-dataset

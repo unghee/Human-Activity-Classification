@@ -14,19 +14,16 @@ from dataset import EnableDataset
 
 # Load the dataset and train, val, test splits
 print("Loading datasets...")
-BIO=EnableDataset('/Users/ungheelee/codes/Human-Activity-Classification/Data/AB156_Raw/AB156_Circuit_001_raw.csv')
-BIO_train = BIO[:30000]
-BIO_val = BIO[30000:-1]
-BIO_test = EnableDataset('/Users/ungheelee/codes/Human-Activity-Classification/Data/AB156_Raw/AB156_Circuit_002_raw.csv')
-BIO_test = BIO_test[30000:-1]
-
+BIO=EnableDataset('AB188_Circuit_001_raw.csv')
+BIO_train = EnableDataset('AB188_Circuit_001_raw.csv')
+BIO_val = EnableDataset('AB188_Circuit_002_raw.csv')
+BIO_test = EnableDataset('AB188_Circuit_003_raw.csv')
 
 # Create dataloaders
 # TODO: Experiment with different batch sizes
-trainloader = DataLoader(BIO_train, batch_size=64, shuffle=True)
-valloader = DataLoader(BIO_val, batch_size=64, shuffle=True)
-testloader = DataLoader(BIO_test, batch_size=64, shuffle=True)
-
+trainloader = DataLoader(BIO_train, batch_size=10)
+valloader = DataLoader(BIO_val, batch_size=10)
+testloader = DataLoader(BIO_test, batch_size=10)
 
 
 class Network(nn.Module):
@@ -118,7 +115,7 @@ def evaluate(model, loader): # Evaluate accuracy on validation / test set
     acc = correct/len(loader.dataset)
     print("Evaluation accuracy: {}".format(acc))
     return acc
-    
+
 loss_history, val_history =train(model, trainloader, num_epoch)
 print("Evaluate on validation set...")
 evaluate(model, valloader)
