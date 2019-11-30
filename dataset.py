@@ -12,25 +12,13 @@ import numpy as np
 
 
 class EnableDataset(Dataset):
-    def __init__(self, file_path, window_size=1000, stride=500, delay=500, transform=None, processed=False):
+    def __init__(self, file_path, window_size=1000, stride=500, delay=500, processed=False):
         raw_data = pd.read_csv(file_path)
         if processed:
-            segmented_data, self.labels = self.segment_processed_data(raw_data, delay=delay)
-            # PLS READ THIS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-            # The function works but returns a list of 2D numpy arrays instead of a 3D numpy array. Since this output is incompatable with the rest of the code I exit()
-            # The reason for the list is because unlike, for unprocessed data, we are unevenly segmenting the data here based on left and right heel contacts and you cant make
-            # a numpy array with different dimensions inside (Rishi: I`d have to pad the data, not sure if you guys want that)
-
-            # Rishi: I can change the segment_unprocessed_data function to return a list tof 2D numpy arrays as well but that might change Justin`s implementation for spectrogram
-            # Let me know, and I'll change it
-            print(segmented_data)
-            print(self.labels)
-            exit()
+            segmented_data, self.labels = self.segment_processed_data(raw_data, window_size=window_size)
         else:
             segmented_data, self.labels = self.segment_unprocessed_data(raw_data, window_size=window_size, stride=stride,delay=delay)
         self.img_data = self.spectrogram2(segmented_data)
-        self.transform = transform
 
     def __len__(self):
         return self.img_data.shape[0]
@@ -38,7 +26,8 @@ class EnableDataset(Dataset):
     def __getitem__(self, idx):
         return self.img_data[idx], self.labels[idx]
 
-    def segment_processed_data(self, raw_data, delay=500):
+    # Variable time step implementation, returns list of numpy arrays
+    def segment_processed_data_2(self, raw_data, delay=500):
         segmented_data = []
         labels = []
         timesteps = []
@@ -57,6 +46,27 @@ class EnableDataset(Dataset):
             if (timestep[1] + delay < raw_data.shape[0]):
                 labels.append(raw_data.loc[timestep[1]+delay, 'Mode'])
                 segmented_data.append(raw_data.loc[timestep[0]:timestep[1]-1, 'Right_Shank_Ax':'Left_Knee'])
+        return segmented_data, labels
+
+    # Get window_size rows before right and left heel contacts. The labels are the labels at the right and left heel contact times
+    def segment_processed_data(self, raw_data, window_size=1000):
+        segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
+        labels = np.array([], dtype=np.int64)
+        timesteps = []
+        index = 0
+        while not pd.isnull(raw_data.loc[index, 'Right_Heel_Contact']):
+            timesteps.append(raw_data.loc[index, 'Right_Heel_Contact'])
+            index += 1
+        index = 0
+        while not pd.isnull(raw_data.loc[index, 'Left_Heel_Contact']):
+            timesteps.append(raw_data.loc[index, 'Left_Heel_Contact'])
+            index += 1
+
+        for timestep in timesteps:
+            if timestep-window_size-1 >= 0:
+                labels = np.append(labels, [raw_data.loc[timestep, 'Mode']], axis=0)
+                data = np.expand_dims(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee'], axis=0)
+                segmented_data = np.concatenate((segmented_data, data), axis=0)
         return segmented_data, labels
 
 
