@@ -15,15 +15,23 @@ from dataset import EnableDataset
 # Load the dataset and train, val, test splits
 print("Loading datasets...")
 # BIO=EnableDataset('/AB188_Raw/AB188_Circuit_001_raw.csv')
-BIO_train = EnableDataset('Data/AB188_Raw/AB188_Circuit_001_raw.csv')
-BIO_val = EnableDataset('Data/AB188_Raw/AB188_Circuit_002_raw.csv')
-BIO_test = EnableDataset('Data/AB188_Raw/AB188_Circuit_003_raw.csv')
+
+BIO_train= EnableDataset(data_range=(1,8),processed=True)
+BIO_val= EnableDataset(data_range=(8,9),processed=True)
+BIO_test= EnableDataset(data_range=(9,10),processed=True)
+
+# BIO_train = BIO_data[1:8]
+# BIO_val = BIO_data[100:130]
+# BIO_test= BIO_data[130:-1]
+# BIO_train = EnableDataset('Data/Processed/AB156_Circuit_001_post.csv',processed=True)
+# BIO_val = EnableDataset('Data/Processed/AB156_Circuit_002_post.csv',processed=True)
+# BIO_test = EnableDataset('Data/Procesed/AB156_Circuit_003_post.csv',processed=True)
 
 # Create dataloaders
 # TODO: Experiment with different batch sizes
-trainloader = DataLoader(BIO_train, batch_size=10)
-valloader = DataLoader(BIO_val, batch_size=10)
-testloader = DataLoader(BIO_test, batch_size=10)
+trainloader = DataLoader(BIO_train, batch_size=1)
+valloader = DataLoader(BIO_val, batch_size=1)
+testloader = DataLoader(BIO_test, batch_size=1)
 
 
 class Network(nn.Module):
@@ -47,7 +55,7 @@ class Network(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),
             )
         self.drop_out = nn.Dropout()
-        self.fc1 = nn.Linear(9 * 12 * 24, 500)
+        self.fc1 = nn.Linear( 1* 12 * 24, 500)
         self.fc2 = nn.Linear(500, 7)
 
 
@@ -61,9 +69,10 @@ class Network(nn.Module):
         # # The loss layer will be applied outside Network class
         # x = x.view(-1,28,28,1)
 
-        x = self.sclayer1(x) #torch.Size([10, 3, 38, 51])
-        x = self.sclayer2(x) #torch.Size([10, 12, 19, 25])
-        x = x.reshape(x.size(0), -1) #torch.Size([10, 24, 9, 12])
+        # torch.Size([1, 3, 4, 51])
+        x = self.sclayer1(x) #torch.Size([1, 12, 2, 25])
+        x = self.sclayer2(x) #torch.Size([1, 24, 1, 12])
+        x = x.reshape(x.size(0), -1) 
         # x = x.view(-1,7 * 7 * 32)
         x = self.drop_out(x)
         x = self.fc1(x)
