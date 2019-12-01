@@ -88,7 +88,7 @@ model.eval()
 criterion = nn.CrossEntropyLoss() # Specify the loss layer
 # TODO: Modify the line below, experiment with different optimizers and parameters (such as learning rate)
 optimizer = optim.Adam(model.parameters(), lr=1e-2, weight_decay=1e-4) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
-num_epoch = 10
+num_epoch = 5
 
 
 # TODO: Choose an appropriate number of training epochs
@@ -141,23 +141,23 @@ print("Evaluate on test set")
 evaluate(model, testloader)
 
 
-fig =plt.figure()
-plt.plot(loss_history,label='train loss')
-plt.xlabel('iteration')
-plt.ylabel('loss')
-plt.legend()
-plt.show()
-fig.savefig('train_loss.jpg')
+# fig =plt.figure()
+# plt.plot(loss_history,label='train loss')
+# plt.xlabel('iteration')
+# plt.ylabel('loss')
+# plt.legend()
+# plt.show()
+# fig.savefig('train_loss.jpg')
 
-fig =plt.figure()
-plt.plot(val_history,label='vaidation accuracy')
-plt.xlabel('epoch')
-plt.ylabel('accuracy')
-list_idx = [ i for i in range(20)]
-plt.xticks(np.array(list_idx))
-plt.legend()
-plt.show()
-fig.savefig('val_acc.jpg')
+# fig =plt.figure()
+# plt.plot(val_history,label='vaidation accuracy')
+# plt.xlabel('epoch')
+# plt.ylabel('accuracy')
+# list_idx = [ i for i in range(20)]
+# plt.xticks(np.array(list_idx))
+# plt.legend()
+# plt.show()
+# fig.savefig('val_acc.jpg')
 
 
 

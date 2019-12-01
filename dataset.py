@@ -82,11 +82,11 @@ class EnableDataset(Dataset):
         img, label = self.dataset[index]
         return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
 
-    def spectrogram2(self, segmented_data, fs=500):
+    def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=10):
         vals1 = []
         for x in range(3):
             row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(100, True), noverlap=50)
+            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
             tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
             Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
             Sxx = Sxx/np.max(Sxx)*255
@@ -94,7 +94,7 @@ class EnableDataset(Dataset):
         vals2 = []
         for x in range(6,9):
             row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(100, True), noverlap=50)
+            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
             tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
             Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
             Sxx = Sxx/np.max(Sxx)*255
@@ -110,7 +110,7 @@ class EnableDataset(Dataset):
         return out
 
 
-    def spectrogram(self, segmented_data, fs=500):
+    def spectrogram(self, segmented_data, fs=500, hamming_windowsize=10):
         vals1 = []
         for x in range(3):
             row = segmented_data[y,:,x]
