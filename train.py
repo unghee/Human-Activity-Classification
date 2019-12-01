@@ -16,7 +16,7 @@ from dataset import EnableDataset
 print("Loading datasets...")
 
 
-BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,4),processed=True)
+BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,47),processed=True)
 BIO_val= EnableDataset(subject_list= ['185'],data_range=(47,49),processed=True)
 BIO_test= EnableDataset(subject_list= ['186'],data_range=(47,50),processed=True)
 
@@ -79,8 +79,10 @@ device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 print('GPU USED?',torch.cuda.is_available())
 # model = Network().to(device)
 
-model = torch.hub.load('pytorch/vision:v0.4.2', 'resnet18', pretrained=True) # use resnet
-model.fc.out_features = 7
+model = torch.hub.load('pytorch/vision:v0.4.2', 'resnet18', num_classes=7) # use resnet
+num_ftrs = model.fc.in_features
+model.fc = nn.Linear(num_ftrs, 7)
+
 model = model.to(device)
 model.eval()
 criterion = nn.CrossEntropyLoss() # Specify the loss layer
