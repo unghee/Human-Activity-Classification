@@ -16,15 +16,15 @@ from dataset import EnableDataset
 print("Loading datasets...")
 
 
-BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,47),processed=True)
+BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,4),processed=True)
 BIO_val= EnableDataset(subject_list= ['185'],data_range=(47,49),processed=True)
 BIO_test= EnableDataset(subject_list= ['186'],data_range=(47,50),processed=True)
 
 # Create dataloaders
 # TODO: Experiment with different batch sizes
-trainloader = DataLoader(BIO_train, batch_size=5)
-valloader = DataLoader(BIO_val, batch_size=5)
-testloader = DataLoader(BIO_test, batch_size=5)
+trainloader = DataLoader(BIO_train, batch_size=1)
+valloader = DataLoader(BIO_val, batch_size=1)
+testloader = DataLoader(BIO_test, batch_size=1)
 
 
 
@@ -80,6 +80,7 @@ print('GPU USED?',torch.cuda.is_available())
 # model = Network().to(device)
 
 model = torch.hub.load('pytorch/vision:v0.4.2', 'resnet18', pretrained=True) # use resnet
+model.fc.out_features = 7
 model = model.to(device)
 model.eval()
 criterion = nn.CrossEntropyLoss() # Specify the loss layer
@@ -102,7 +103,7 @@ def train(model, loader, num_epoch = 20): # Train the model
             label = label.to(device)
             # batch = batch.float()
             # label = label.float()
-            # plt.imshow(batch)
+            # plt.imshow(batch.cpu().detach().numpy().transpose(2,1,0))
             # plt.show()
 
             optimizer.zero_grad() # Clear gradients from the previous iteration
@@ -110,7 +111,7 @@ def train(model, loader, num_epoch = 20): # Train the model
             loss = criterion(pred, label) # Calculate the loss
             running_loss.append(loss.item())
             loss.backward() # Backprop gradients to all tensors in the network
-            optimizer.step() # Update trainable weights
+            optimizer.step() # Update trainable weightspre
             loss_history.append(np.mean(running_loss))
         val_acc = evaluate(model, valloader)
         val_history.append(val_acc)
