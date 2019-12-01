@@ -13,64 +13,65 @@ import numpy as np
 
 
 class EnableDataset(Dataset):
-    def __init__(self, dataDir='./Data/' ,data_range=(1, 10), window_size=150, stride=500, delay=500, processed=False):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=150, stride=500, delay=500, processed=False):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
         # self.img_data_stack=np.array([],shape=(51, 3, 4, 51), dtype=np.int64)
         self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
-        subject_list= ['156','185']
+        # subject_list= ['156','185']
         self.dataset = []
-        for i in range(data_range[0], data_range[1]):   
-            raw_data = pd.read_csv(dataDir +'AB' + subject_list[0]+'/Processed/'+'AB' + subject_list[0]+ '_Circuit_%03d_post.csv'% i)
+        for subjects in subject_list:
+            for i in range(data_range[0], data_range[1]):   
+                raw_data = pd.read_csv(dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i)
 
 
-            segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
-            labels = np.array([], dtype=np.int64)
-            timesteps = []
-            triggers = []
-            index = 0
-            while not pd.isnull(raw_data.loc[index, 'Right_Heel_Contact']):
-                timesteps.append(raw_data.loc[index, 'Right_Heel_Contact'])
-                trigger = raw_data.loc[index, 'Right_Heel_Contact_Trigger']
-                trigger=str(int(trigger))
-                triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-                labels = np.append(labels,[float(trigger[2])], axis =0)
-                index += 1
-            index = 0
-            while not pd.isnull(raw_data.loc[index, 'Right_Toe_Off']):
-                timesteps.append(raw_data.loc[index, 'Right_Toe_Off'])
-                trigger = raw_data.loc[index, 'Right_Toe_Off_Trigger']
-                trigger=str(int(trigger))
-                triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-                labels = np.append(labels,[float(trigger[2])], axis =0)
-                index += 1
-            index = 0
-            while not pd.isnull(raw_data.loc[index, 'Left_Heel_Contact']):
-                timesteps.append(raw_data.loc[index, 'Left_Heel_Contact'])
-                trigger = raw_data.loc[index, 'Left_Heel_Contact_Trigger']
-                trigger=str(int(trigger))
-                triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-                labels = np.append(labels,[float(trigger[2])], axis =0)
-                index += 1
-            index = 0 
-            while not pd.isnull(raw_data.loc[index, 'Left_Toe_Off']):
-                timesteps.append(raw_data.loc[index, 'Left_Toe_Off'])
-                trigger = raw_data.loc[index, 'Left_Toe_Off_Trigger']
-                trigger=str(int(trigger))
-                triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-                labels = np.append(labels,[float(trigger[2])], axis =0)
-                index += 1
-            index = 0 
+                segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
+                labels = np.array([], dtype=np.int64)
+                timesteps = []
+                triggers = []
+                index = 0
+                while not pd.isnull(raw_data.loc[index, 'Right_Heel_Contact']):
+                    timesteps.append(raw_data.loc[index, 'Right_Heel_Contact'])
+                    trigger = raw_data.loc[index, 'Right_Heel_Contact_Trigger']
+                    trigger=str(int(trigger))
+                    triggers.append(trigger) # triggers can be used to compare translational and steady-state error
+                    labels = np.append(labels,[float(trigger[2])], axis =0)
+                    index += 1
+                index = 0
+                while not pd.isnull(raw_data.loc[index, 'Right_Toe_Off']):
+                    timesteps.append(raw_data.loc[index, 'Right_Toe_Off'])
+                    trigger = raw_data.loc[index, 'Right_Toe_Off_Trigger']
+                    trigger=str(int(trigger))
+                    triggers.append(trigger) # triggers can be used to compare translational and steady-state error
+                    labels = np.append(labels,[float(trigger[2])], axis =0)
+                    index += 1
+                index = 0
+                while not pd.isnull(raw_data.loc[index, 'Left_Heel_Contact']):
+                    timesteps.append(raw_data.loc[index, 'Left_Heel_Contact'])
+                    trigger = raw_data.loc[index, 'Left_Heel_Contact_Trigger']
+                    trigger=str(int(trigger))
+                    triggers.append(trigger) # triggers can be used to compare translational and steady-state error
+                    labels = np.append(labels,[float(trigger[2])], axis =0)
+                    index += 1
+                index = 0 
+                while not pd.isnull(raw_data.loc[index, 'Left_Toe_Off']):
+                    timesteps.append(raw_data.loc[index, 'Left_Toe_Off'])
+                    trigger = raw_data.loc[index, 'Left_Toe_Off_Trigger']
+                    trigger=str(int(trigger))
+                    triggers.append(trigger) # triggers can be used to compare translational and steady-state error
+                    labels = np.append(labels,[float(trigger[2])], axis =0)
+                    index += 1
+                index = 0 
 
-            for idx,timestep in enumerate(timesteps):
-                if timestep-window_size-1 >= 0:
-                    # labels = np.append(labels, [raw_data.loc[timestep, 'Mode']], axis=0)
-                    data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee'])
-                    img= self.spectrogram2(data)
-                    img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
+                for idx,timestep in enumerate(timesteps):
+                    if timestep-window_size-1 >= 0:
+                        # labels = np.append(labels, [raw_data.loc[timestep, 'Mode']], axis=0)
+                        data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee'])
+                        img= self.spectrogram2(data)
+                        img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
 
-                    self.dataset.append((img,labels[idx]))
+                        self.dataset.append((img,labels[idx]))
         print("load dataset done")
 
 

@@ -14,24 +14,19 @@ from dataset import EnableDataset
 
 # Load the dataset and train, val, test splits
 print("Loading datasets...")
-# BIO=EnableDataset('/AB188_Raw/AB188_Circuit_001_raw.csv')
 
-BIO_train= EnableDataset(data_range=(1,8),processed=True)
-BIO_val= EnableDataset(data_range=(8,9),processed=True)
-BIO_test= EnableDataset(data_range=(9,10),processed=True)
 
-# BIO_train = BIO_data[1:8]
-# BIO_val = BIO_data[100:130]
-# BIO_test= BIO_data[130:-1]
-# BIO_train = EnableDataset('Data/Processed/AB156_Circuit_001_post.csv',processed=True)
-# BIO_val = EnableDataset('Data/Processed/AB156_Circuit_002_post.csv',processed=True)
-# BIO_test = EnableDataset('Data/Procesed/AB156_Circuit_003_post.csv',processed=True)
+BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,47),processed=True)
+BIO_val= EnableDataset(subject_list= ['185'],data_range=(47,49),processed=True)
+BIO_test= EnableDataset(subject_list= ['186'],data_range=(47,50),processed=True)
 
 # Create dataloaders
 # TODO: Experiment with different batch sizes
-trainloader = DataLoader(BIO_train, batch_size=1)
-valloader = DataLoader(BIO_val, batch_size=1)
-testloader = DataLoader(BIO_test, batch_size=1)
+trainloader = DataLoader(BIO_train, batch_size=5)
+valloader = DataLoader(BIO_val, batch_size=5)
+testloader = DataLoader(BIO_test, batch_size=5)
+
+
 
 
 class Network(nn.Module):
@@ -82,11 +77,15 @@ class Network(nn.Module):
 
 device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 print('GPU USED?',torch.cuda.is_available())
-model = Network().to(device)
+# model = Network().to(device)
+
+model = torch.hub.load('pytorch/vision:v0.4.2', 'resnet18', pretrained=True) # use resnet
+model = model.to(device)
+model.eval()
 criterion = nn.CrossEntropyLoss() # Specify the loss layer
 # TODO: Modify the line below, experiment with different optimizers and parameters (such as learning rate)
-optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
-num_epoch = 20
+optimizer = optim.Adam(model.parameters(), lr=1e-2, weight_decay=1e-4) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
+num_epoch = 10
 
 
 # TODO: Choose an appropriate number of training epochs
