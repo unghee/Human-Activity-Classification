@@ -22,7 +22,7 @@ class EnableDataset(Dataset):
         return self.img_data.shape[0]
 
     def __getitem__(self, idx):
-        return self.img_data[idx], self.labels[idx]
+        return torch.FloatTensor(self.img_data[idx]), self.labels[idx]
 
     # Returns segmented_data, labels
     # segmented_data is numpy array of dimension: (<number of segments> X <window size> X <number of columns>)
@@ -116,9 +116,13 @@ class EnableDataset(Dataset):
             #out = np.flipud(out/np.max(out)*255)
             #print(np.min(out), np.max(out))
             out = np.flipud(out)
+            out=np.asarray(out).transpose(2,1,0)/128.0-1.0
             ret.append(out.astype(np.uint8))
             #plt.imshow(out[:,:,0].astype(np.uint8))
             #plt.show()
+            # ret = np.asarray(ret).transpose(0, 2, 3, 1)/128.0-1.0
         ret = np.stack(ret)
+        # ret = np.asarray(ret).transpose(0, 2, 3, 1)/128.0-1.0
+        # ret = np.asarray(ret).astype("f").transpose(2, 0, 1)/128.0-1.0
         #print(ret.shape)
         return ret

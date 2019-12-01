@@ -14,10 +14,10 @@ from dataset import EnableDataset
 
 # Load the dataset and train, val, test splits
 print("Loading datasets...")
-BIO=EnableDataset('AB188_Circuit_001_raw.csv')
-BIO_train = EnableDataset('AB188_Circuit_001_raw.csv')
-BIO_val = EnableDataset('AB188_Circuit_002_raw.csv')
-BIO_test = EnableDataset('AB188_Circuit_003_raw.csv')
+# BIO=EnableDataset('/AB188_Raw/AB188_Circuit_001_raw.csv')
+BIO_train = EnableDataset('Data/AB188_Raw/AB188_Circuit_001_raw.csv')
+BIO_val = EnableDataset('Data/AB188_Raw/AB188_Circuit_002_raw.csv')
+BIO_test = EnableDataset('Data/AB188_Raw/AB188_Circuit_003_raw.csv')
 
 # Create dataloaders
 # TODO: Experiment with different batch sizes
@@ -38,16 +38,17 @@ class Network(nn.Module):
         # self.fc1 = nn.Linear(28*28, 8) # from 28x28 input image to hidden layer of size 256
         # self.fc2 = nn.Linear(8,10) # from hidden layer to 10 class scores
         self.sclayer1 = nn.Sequential(
-            nn.Conv2d(1, 12, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(3, 12, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
         self.sclayer2 = nn.Sequential(
             nn.Conv2d(12, 24, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2))
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            )
         self.drop_out = nn.Dropout()
-        self.fc1 = nn.Linear(7 * 7 * 24, 500)
-        self.fc2 = nn.Linear(500, 10)
+        self.fc1 = nn.Linear(9 * 12 * 24, 500)
+        self.fc2 = nn.Linear(500, 7)
 
 
     def forward(self,x):
@@ -59,9 +60,10 @@ class Network(nn.Module):
         # x = self.fc2(x)
         # # The loss layer will be applied outside Network class
         # x = x.view(-1,28,28,1)
-        x = self.sclayer1(x)
-        x = self.sclayer2(x)
-        x = x.reshape(x.size(0), -1)
+
+        x = self.sclayer1(x) #torch.Size([10, 3, 38, 51])
+        x = self.sclayer2(x) #torch.Size([10, 12, 19, 25])
+        x = x.reshape(x.size(0), -1) #torch.Size([10, 24, 9, 12])
         # x = x.view(-1,7 * 7 * 32)
         x = self.drop_out(x)
         x = self.fc1(x)
@@ -90,6 +92,11 @@ def train(model, loader, num_epoch = 20): # Train the model
         for batch, label in tqdm(loader):
             batch = batch.to(device)
             label = label.to(device)
+            # batch = batch.float()
+            # label = label.float()
+            # plt.imshow(batch)
+            # plt.show()
+
             optimizer.zero_grad() # Clear gradients from the previous iteration
             pred = model(batch) # This will call Network.forward() that you implement
             loss = criterion(pred, label) # Calculate the loss
