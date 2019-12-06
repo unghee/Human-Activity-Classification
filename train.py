@@ -16,15 +16,15 @@ from dataset import EnableDataset
 print("Loading datasets...")
 
 
-BIO_train= EnableDataset(subject_list= ['156','185','186','188','189'],data_range=(1,47),processed=True)
+BIO_train= EnableDataset(subject_list= ['156','185','188','189','190'],data_range=(1,40),processed=True)
 BIO_val= EnableDataset(subject_list= ['189'],data_range=(47,49),processed=True)
 BIO_test= EnableDataset(subject_list= ['190'],data_range=(47,50),processed=True)
 
 # Create dataloaders
 # TODO: Experiment with different batch sizes
-trainloader = DataLoader(BIO_train, batch_size=1)
-valloader = DataLoader(BIO_val, batch_size=1)
-testloader = DataLoader(BIO_test, batch_size=1)
+trainloader = DataLoader(BIO_train, batch_size=10)
+valloader = DataLoader(BIO_val, batch_size=10)
+testloader = DataLoader(BIO_test, batch_size=10)
 
 numb_class = 7
 
@@ -87,7 +87,7 @@ model = model.to(device)
 model.eval()
 criterion = nn.CrossEntropyLoss() # Specify the loss layer
 # TODO: Modify the line below, experiment with different optimizers and parameters (such as learning rate)
-optimizer = optim.Adam(model.parameters(), lr=1e-2, weight_decay=1e-4) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
+optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
 num_epoch = 5
 
 
