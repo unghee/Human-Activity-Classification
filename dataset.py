@@ -7,9 +7,12 @@ import matplotlib
 # matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
 
+from tqdm import tqdm # Displays a progress bar
+
 import pandas as pd
 import numpy as np
 
+import os
 
 
 
@@ -18,13 +21,14 @@ class EnableDataset(Dataset):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
-        # self.img_data_stack=np.array([],shape=(51, 3, 4, 51), dtype=np.int64)
         self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
-        # subject_list= ['156','185']
-        self.dataset = []
         for subjects in subject_list:
-            for i in range(data_range[0], data_range[1]):   
-                raw_data = pd.read_csv(dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i)
+            for i in tqdm(range(data_range[0], data_range[1])):
+                filename = dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i
+                if not os.path.exists(filename):
+                    print(filename, 'not found')
+                    continue
+                raw_data = pd.read_csv(filename)
 
 
                 segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
@@ -44,51 +48,14 @@ class EnableDataset(Dataset):
 	                    index += 1
 	                index = 0
 
-                # while not pd.isnull(raw_data.loc[index, 'Right_Heel_Contact']):
-                #     timesteps.append(raw_data.loc[index, 'Right_Heel_Contact'])
-                #     trigger = raw_data.loc[index, 'Right_Heel_Contact_Trigger']
-                #     trigger=str(int(trigger))
-                #     triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-                #     labels = np.append(labels,[float(trigger[2])], axis =0)
-                #     index += 1
-                # index = 0
-                # while not pd.isnull(raw_data.loc[index, 'Right_Toe_Off']):
-                #     timesteps.append(raw_data.loc[index, 'Right_Toe_Off'])
-                #     trigger = raw_data.loc[index, 'Right_Toe_Off_Trigger']
-                #     trigger=str(int(trigger))
-                #     triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-                #     labels = np.append(labels,[float(trigger[2])], axis =0)
-                #     index += 1
-                # index = 0
-                # while not pd.isnull(raw_data.loc[index, 'Left_Heel_Contact']):
-                #     timesteps.append(raw_data.loc[index, 'Left_Heel_Contact'])
-                #     trigger = raw_data.loc[index, 'Left_Heel_Contact_Trigger']
-                #     trigger=str(int(trigger))
-                #     triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-                #     labels = np.append(labels,[float(trigger[2])], axis =0)
-                #     index += 1
-                # index = 0 
-                # while not pd.isnull(raw_data.loc[index, 'Left_Toe_Off']):
-                #     timesteps.append(raw_data.loc[index, 'Left_Toe_Off'])
-                #     trigger = raw_data.loc[index, 'Left_Toe_Off_Trigger']
-                #     trigger=str(int(trigger))
-                #     triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-                #     labels = np.append(labels,[float(trigger[2])], axis =0)
-                #     index += 1
-                # index = 0 
-
                 for idx,timestep in enumerate(timesteps):
                     if timestep-window_size-1 >= 0:
-                        # labels = np.append(labels, [raw_data.loc[timestep, 'Mode']], axis=0)
                         data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
                         img= self.spectrogram2(data)
-                        # f, t, Sxx = signal.spectrogram(data, 500)
-                        # Pxx, freqs, bins, im = plt.specgram(data, Fs=500)
-                        # cv2.imshow("test", Pxx)
-                        # cv2.waitKey(0)
                         img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
-
                         self.dataset.append((img,labels[idx]))
+
+                # print(filename, "has been loaded")
         print("load dataset done")
 
 
