@@ -14,7 +14,7 @@ import numpy as np
 
 
 class EnableDataset(Dataset):
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=150, stride=500, delay=500, processed=False):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, stride=500, delay=500, processed=False):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -23,6 +23,7 @@ class EnableDataset(Dataset):
         # subject_list= ['156','185']
         self.dataset = []
         for subjects in subject_list:
+            print(subjects)
             for i in range(data_range[0], data_range[1]):   
                 raw_data = pd.read_csv(dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i)
 
@@ -82,11 +83,15 @@ class EnableDataset(Dataset):
                         # labels = np.append(labels, [raw_data.loc[timestep, 'Mode']], axis=0)
                         data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
                         img= self.spectrogram2(data)
+                        img = cv2.resize(img.transpose(1,2,0), None, fx=2, fy=2).transpose(2,0,1)
+                        #print(img.shape)
+                        #cv2.imshow("img", img)
+                        #cv2.waitKey(0)
                         # f, t, Sxx = signal.spectrogram(data, 500)
                         # Pxx, freqs, bins, im = plt.specgram(data, Fs=500)
                         # cv2.imshow("test", Pxx)
                         # cv2.waitKey(0)
-                        img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
+                        #img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
 
                         self.dataset.append((img,labels[idx]))
         print("load dataset done")
@@ -99,11 +104,11 @@ class EnableDataset(Dataset):
         img, label = self.dataset[index]
         return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
 
-    def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=10):
+    def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=20, overlap = 10):
         vals1 = []
         for x in range(3):
             row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
+            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=overlap)
             tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
             Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
             Sxx = Sxx/np.max(Sxx)*255
@@ -111,7 +116,7 @@ class EnableDataset(Dataset):
         vals2 = []
         for x in range(6,9):
             row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
+            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=overlap)
             tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
             Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
             Sxx = Sxx/np.max(Sxx)*255
@@ -119,7 +124,7 @@ class EnableDataset(Dataset):
         vals3 = []
         for x in range(9,12):
             row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
+            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=overlap)
             tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
             Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
             Sxx = Sxx/np.max(Sxx)*255
@@ -127,16 +132,16 @@ class EnableDataset(Dataset):
         vals4 =[]
         for x in range(12,15):
             row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
+            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=overlap)
             tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
             Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
             Sxx = Sxx/np.max(Sxx)*255
             vals4.append(Sxx)
 
-        out1 = np.stack(vals1, axis=2)
-        out2 = np.stack(vals2, axis=2)
-        out3 = np.stack(vals3, axis=2)
-        out4 = np.stack(vals4, axis=2)
+        out1 = np.stack(vals1)
+        out2 = np.stack(vals2)
+        out3 = np.stack(vals3)
+        out4 = np.stack(vals4)
         out = np.hstack((out1, out2,out3,out4))
 
         out = np.flipud(out)
