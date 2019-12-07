@@ -7,9 +7,12 @@ import matplotlib
 # matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
 
+from tqdm import tqdm # Displays a progress bar
+
 import pandas as pd
 import numpy as np
 
+import os
 
 
 
@@ -18,13 +21,14 @@ class EnableDataset(Dataset):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
-        # self.img_data_stack=np.array([],shape=(51, 3, 4, 51), dtype=np.int64)
         self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
-        # subject_list= ['156','185']
-        self.dataset = []
         for subjects in subject_list:
-            for i in range(data_range[0], data_range[1]):   
-                raw_data = pd.read_csv(dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i)
+            for i in tqdm(range(data_range[0], data_range[1])):
+                filename = dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i
+                if not os.path.exists(filename):
+                    print(filename, 'not found')
+                    continue
+                raw_data = pd.read_csv(filename)
 
 
                 segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
@@ -48,15 +52,16 @@ class EnableDataset(Dataset):
 
                 for idx,timestep in enumerate(timesteps):
                     if timestep-window_size-1 >= 0:
-                        # labels = np.append(labels, [raw_data.loc[timestep, 'Mode']], axis=0)
                         data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
                         img= self.spectrogram2(data)
+                        ## for debugging purpose
                         # plt.imshow(img)
                         # plt.show()
                         img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
                         img=np.reshape(img,(3,107,16*6))
-
                         self.dataset.append((img,labels[idx]))
+
+                # print(filename, "has been loaded")
         print("load dataset done")
 
 
