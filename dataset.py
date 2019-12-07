@@ -17,7 +17,7 @@ import os
 
 
 class EnableDataset(Dataset):
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=150, stride=500, delay=500, processed=False):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, stride=500, delay=500, processed=False):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -29,7 +29,6 @@ class EnableDataset(Dataset):
                     print(filename, 'not found')
                     continue
                 raw_data = pd.read_csv(filename)
-
 
                 segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
                 labels = np.array([], dtype=np.int64)
@@ -93,7 +92,6 @@ class EnableDataset(Dataset):
         	out = np.hstack((out,outs[i]))	
 
         out = np.flipud(out)
-
         out=out.astype(np.uint8)
         return out
 
