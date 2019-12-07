@@ -45,6 +45,8 @@ class EnableDataset(Dataset):
 	                    trigger=str(int(trigger))
 	                    triggers.append(trigger) # triggers can be used to compare translational and steady-state error
 	                    labels = np.append(labels,[float(trigger[2])], axis =0)
+	                    if float(trigger[2]) == 0:
+	                    	print('sitting condition exists!!!!!')
 	                    index += 1
 	                index = 0
 
@@ -52,7 +54,11 @@ class EnableDataset(Dataset):
                     if timestep-window_size-1 >= 0:
                         data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
                         img= self.spectrogram2(data)
+                        ## for debugging purpose
+                        # plt.imshow(img)
+                        # plt.show()
                         img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
+                        img=np.reshape(img,(3,107,16*6))
                         self.dataset.append((img,labels[idx]))
 
                 # print(filename, "has been loaded")
@@ -67,44 +73,24 @@ class EnableDataset(Dataset):
         return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
 
     def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=10):
-        vals1 = []
-        for x in range(3):
-            row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
-            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
-            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
-            Sxx = Sxx/np.max(Sxx)*255
-            vals1.append(Sxx)
-        vals2 = []
-        for x in range(6,9):
-            row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
-            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
-            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
-            Sxx = Sxx/np.max(Sxx)*255
-            vals2.append(Sxx)
-        vals3 = []
-        for x in range(9,12):
-            row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
-            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
-            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
-            Sxx = Sxx/np.max(Sxx)*255
-            vals3.append(Sxx)
-        vals4 =[]
-        for x in range(12,15):
-            row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
-            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
-            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
-            Sxx = Sxx/np.max(Sxx)*255
-            vals4.append(Sxx)
 
-        out1 = np.stack(vals1, axis=2)
-        out2 = np.stack(vals2, axis=2)
-        out3 = np.stack(vals3, axis=2)
-        out4 = np.stack(vals4, axis=2)
-        out = np.hstack((out1, out2,out3,out4))
+        vals=[]
+        for i in range(0,17):
+        	vals.append([])
+	        for x in range(3*i,3*(i+1)):
+	            row = segmented_data[:,x]
+	            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
+	            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
+	            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
+	            Sxx = Sxx/np.max(Sxx)*255
+	            vals[i].append(Sxx)
+
+        outs =[]*17
+        for i in range(0,17):
+        	outs.append(np.stack(vals[i], axis=2))
+        out = np.empty((6,29,3), dtype=float)
+        for i in range(0,17):
+        	out = np.hstack((out,outs[i]))	
 
         out = np.flipud(out)
 

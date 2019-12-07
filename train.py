@@ -12,13 +12,19 @@ from torch.utils.data import Dataset, Subset, DataLoader, random_split
 from dataset import EnableDataset
 
 
+
 # Load the dataset and train, val, test splits
 print("Loading datasets...")
 
 
-BIO_train= EnableDataset(subject_list= ['156','185','188','189','190'],data_range=(1,40),processed=True)
-BIO_val= EnableDataset(subject_list= ['189'],data_range=(47,49),processed=True)
-BIO_test= EnableDataset(subject_list= ['190'],data_range=(47,50),processed=True)
+BIO_train= EnableDataset(subject_list= ['156','185','188','189','190'],data_range=(1,40),window_size=500,processed=True)
+BIO_val= EnableDataset(subject_list= ['189'],data_range=(47,49),window_size=500,processed=True)
+BIO_test= EnableDataset(subject_list= ['190'],data_range=(47,50),window_size=500,processed=True)
+
+# saving dataset a file
+# np.savez(outfile, BIO_train=BIO_train, BIO_val=BIO_val,BIO_test=BIO_test)
+# npzfile = np.load(outfile)
+# BIO_train,BIO_val,BIO_test = npzfile.files
 
 # Create dataloaders
 # TODO: Experiment with different batch sizes
@@ -88,7 +94,7 @@ model.eval()
 criterion = nn.CrossEntropyLoss() # Specify the loss layer
 # TODO: Modify the line below, experiment with different optimizers and parameters (such as learning rate)
 optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
-num_epoch = 5
+num_epoch = 20
 
 
 # TODO: Choose an appropriate number of training epochs
@@ -107,7 +113,6 @@ def train(model, loader, num_epoch = 20): # Train the model
             # label = label.float()
             # plt.imshow(batch.cpu().detach().numpy().transpose(2,1,0))
             # plt.show()
-
             optimizer.zero_grad() # Clear gradients from the previous iteration
             pred = model(batch) # This will call Network.forward() that you implement
             loss = criterion(pred, label) # Calculate the loss
@@ -138,26 +143,29 @@ loss_history, val_history =train(model, trainloader, num_epoch)
 print("Evaluate on validation set...")
 evaluate(model, valloader)
 print("Evaluate on test set")
-evaluate(model, testloader)
+acc2=evaluate(model, testloader)
+
+np.savetxt('history.txt',(loss_history,val_history))
+np.savetxt('test_accuracy.txt',acc2)
 
 
-# fig =plt.figure()
-# plt.plot(loss_history,label='train loss')
-# plt.xlabel('iteration')
-# plt.ylabel('loss')
-# plt.legend()
-# plt.show()
-# fig.savefig('train_loss.jpg')
+fig =plt.figure()
+plt.plot(loss_history,label='train loss')
+plt.xlabel('iteration')
+plt.ylabel('loss')
+plt.legend()
+plt.show()
+fig.savefig('train_loss.jpg')
 
-# fig =plt.figure()
-# plt.plot(val_history,label='vaidation accuracy')
-# plt.xlabel('epoch')
-# plt.ylabel('accuracy')
-# list_idx = [ i for i in range(20)]
-# plt.xticks(np.array(list_idx))
-# plt.legend()
-# plt.show()
-# fig.savefig('val_acc.jpg')
+fig =plt.figure()
+plt.plot(val_history,label='vaidation accuracy')
+plt.xlabel('epoch')
+plt.ylabel('accuracy')
+list_idx = [ i for i in range(20)]
+plt.xticks(np.array(list_idx))
+plt.legend()
+plt.show()
+fig.savefig('val_acc.jpg')
 
 
 
