@@ -13,15 +13,17 @@ import pandas as pd
 import numpy as np
 
 import os
-
+import torchvision.transforms.functional as F
 
 
 class EnableDataset(Dataset):
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, stride=500, delay=500, processed=False):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, stride=500, delay=500, processed=False,transform=None):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
         self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
+        self.transform = transform
+
         for subjects in subject_list:
             for i in range(data_range[0], data_range[1]):
                 filename = dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i
@@ -70,6 +72,11 @@ class EnableDataset(Dataset):
 
     def __getitem__(self, index):
         img, label = self.dataset[index]
+
+        if self.transform:
+            img = F.to_pil_image(np.uint8(img))
+            img = self.transform(img)
+            img = np.array(img)
         return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
 
     def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=10):

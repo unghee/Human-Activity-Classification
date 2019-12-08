@@ -6,16 +6,15 @@ import torch
 from torch import nn
 from torch import optim
 import torch.nn.functional as F
-from torchvision import datasets, transforms
+from torchvision import datasets, transforms , utils
 from torch.utils.data import Dataset, Subset, DataLoader, random_split
 
 from dataset import EnableDataset
 
 from tempfile import TemporaryFile
 import pickle
+from skimage import io, transform
 
-# from sampler import StratifiedSampler
-from sampler2 import ImbalancedDatasetSampler
 
 ########## SETTINGS  ########################
 
@@ -41,6 +40,12 @@ print("Loading datasets...")
 # BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,48),window_size=500,processed=True)
 # BIO_val= EnableDataset(subject_list= ['156','185','186','189','190', '191', '192', '193', '194'],data_range=(48,49),window_size=500,processed=True)
 # BIO_test= EnableDataset(subject_list= ['156','185','189','190', '192', '193', '194'],data_range=(49,50),window_size=500,processed=True)
+BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,7),window_size=500,processed=True,transform=transforms.Compose([
+                                               transforms.RandomVerticalFlip(p=0.5),
+                                               transforms.RandomHorizontalFlip()
+                                           ]))
+BIO_val= EnableDataset(subject_list= ['156'],data_range=(48,49),window_size=500,processed=True)
+BIO_test= EnableDataset(subject_list= ['156'],data_range=(49,50),window_size=500,processed=True)
 
 
 ## saving dataset a file
@@ -53,12 +58,12 @@ print("Loading datasets...")
 # save_object(BIO_test, 'BIO_test.pkl')
 
 ## load from saved files
-with open('BIO_train.pkl', 'rb') as input:
-    BIO_train = pickle.load(input)
-with open('BIO_val.pkl', 'rb') as input:
-    BIO_val = pickle.load(input)
-with open('BIO_test.pkl', 'rb') as input:
-    BIO_test = pickle.load(input)
+# with open('BIO_train.pkl', 'rb') as input:
+#     BIO_train = pickle.load(input)
+# with open('BIO_val.pkl', 'rb') as input:
+#     BIO_val = pickle.load(input)
+# with open('BIO_test.pkl', 'rb') as input:
+#     BIO_test = pickle.load(input)
 
 
 ## check the class distribution
@@ -101,7 +106,6 @@ testloader = DataLoader(BIO_test, shuffle=False,batch_size=BATCH_SIZE)
 # trainloader = DataLoader(BIO_train, batch_size=32, shuffle=True)
 # valloader = DataLoader(BIO_val, batch_size=32,shuffle=True)
 # testloader = DataLoader(BIO_test, batch_size=32,shuffle=True)
-
 
 class Network(nn.Module):
     def __init__(self):
@@ -153,7 +157,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 print('GPU USED?',torch.cuda.is_available())
 # model = Network().to(device)
 
-model = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', num_classes=numb_class) # use resnet
+model = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
 num_ftrs = model.fc.in_features
 model.fc = nn.Linear(num_ftrs, numb_class)
 
@@ -171,6 +175,8 @@ def train(model, loader, num_epoch = 20): # Train the model
     val_history=[]
     print("Start training...")
     model.train() # Set the model to training mode
+    # model2.train()
+
     for i in range(num_epoch):
         running_loss = []
         for batch, label in tqdm(loader):
@@ -180,6 +186,12 @@ def train(model, loader, num_epoch = 20): # Train the model
             # label = label.float()
             # plt.imshow(batch.cpu().detach().numpy().transpose(2,1,0))
             # plt.show()
+
+            ####
+            # 1 : LW, 
+            ####
+            # if label ==1: #LW
+
             label = label -1 # indexing start from 1 (removing sitting conditon)
             optimizer.zero_grad() # Clear gradients from the previous iteration
             pred = model(batch) # This will call Network.forward() that you implement
@@ -188,6 +200,8 @@ def train(model, loader, num_epoch = 20): # Train the model
             loss.backward() # Backprop gradients to all tensors in the network
             optimizer.step() # Update trainable weightspre
             loss_history.append(np.mean(running_loss))
+
+            # elif label ==2:
         val_acc = evaluate(model, valloader)
         val_history.append(val_acc)
         print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss),val_acc)) # Print the average loss for this epoch
@@ -231,7 +245,7 @@ fig =plt.figure()
 plt.plot(val_history,label='vaidation accuracy')
 plt.xlabel('epoch')
 plt.ylabel('accuracy')
-list_idx = [ i for i in range(num_epco)]
+list_idx = [ i for i in range(num_epoch)]
 plt.xticks(np.array(list_idx))
 plt.legend()
 plt.show()
