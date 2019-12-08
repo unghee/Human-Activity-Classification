@@ -46,34 +46,31 @@ def save_object(obj, filename):
 print("Loading datasets...")
 
 ## calling for the first time
-# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,48),window_size=500,processed=True)
-# BIO_val= EnableDataset(subject_list= ['156','185','186','189','190', '191', '192', '193', '194'],data_range=(48,49),window_size=500,processed=True)
-# BIO_test= EnableDataset(subject_list= ['156','185','189','190', '192', '193', '194'],data_range=(49,50),window_size=500,processed=True)
-BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,5),window_size=500,processed=True,transform=transforms.Compose([
-                                               transforms.RandomVerticalFlip(p=0.5),
-                                               transforms.RandomHorizontalFlip()
-                                           ]))
-BIO_val= EnableDataset(subject_list= ['156'],data_range=(48,49),window_size=500,processed=True)
-BIO_test= EnableDataset(subject_list= ['156'],data_range=(49,50),window_size=500,processed=True)
+BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,48),window_size=500,processed=True)
+BIO_val= EnableDataset(subject_list= ['156','185','186','189','190', '191', '192', '193', '194'],data_range=(48,49),window_size=500,processed=True)
+BIO_test= EnableDataset(subject_list= ['156','185','189','190', '192', '193', '194'],data_range=(49,50),window_size=500,processed=True)
+# BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,5),window_size=500,processed=True,transform=transforms.Compose([
+#                                                transforms.RandomVerticalFlip(p=0.5),
+#                                                transforms.RandomHorizontalFlip()
+#                                            ]))
+# BIO_val= EnableDataset(subject_list= ['156'],data_range=(48,49),window_size=500,processed=True)
+# BIO_test= EnableDataset(subject_list= ['156'],data_range=(49,50),window_size=500,processed=True)
 
 
 
-## saving dataset a file
-outfile = TemporaryFile()
-# np.savez(outfile, BIO_train=BIO_train, BIO_val=BIO_val,BIO_test=BIO_test)
-# npzfile = np.load(outfile)
-# BIO_train,BIO_val,BIO_test = npzfile.files
+# ## saving dataset a file
+
 save_object(BIO_train, 'BIO_train_.pkl')
 save_object(BIO_val, 'BIO_val_.pkl')
 save_object(BIO_test, 'BIO_test_.pkl')
 
 # ## load from saved files
-with open('BIO_train.pkl', 'rb') as input:
-    BIO_train = pickle.load(input)
-with open('BIO_val.pkl', 'rb') as input:
-    BIO_val = pickle.load(input)
-with open('BIO_test.pkl', 'rb') as input:
-    BIO_test = pickle.load(input)
+# with open('BIO_train_.pkl', 'rb') as input:
+#     BIO_train = pickle.load(input)
+# with open('BIO_val_.pkl', 'rb') as input:
+#     BIO_val = pickle.load(input)
+# with open('BIO_test_.pkl', 'rb') as input:
+#     BIO_test = pickle.load(input)
 
 
 ## check the class distribution
