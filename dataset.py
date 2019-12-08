@@ -40,16 +40,17 @@ class EnableDataset(Dataset):
 
                 gait_events = ['Right_Heel_Contact','Right_Toe_Off','Left_Heel_Contact','Left_Toe_Off']
                 for event in gait_events:
-                	while not pd.isnull(raw_data.loc[index, event]):
-	                    timesteps.append(raw_data.loc[index, event])
-	                    trigger = raw_data.loc[index, event+'_Trigger']
-	                    trigger=str(int(trigger))
-	                    triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-	                    labels = np.append(labels,[float(trigger[2])], axis =0)
-	                    if float(trigger[2]) == 0:
-	                    	print('sitting condition exists!!!!!')
-	                    index += 1
-	                index = 0
+                    while not pd.isnull(raw_data.loc[index, event]):
+                        timesteps.append(raw_data.loc[index, event])
+                        trigger = raw_data.loc[index, event+'_Trigger']
+                        trigger=str(int(trigger))
+                        triggers.append(trigger) # triggers can be used to compare translational and steady-state error
+                        labels = np.append(labels,[float(trigger[2])], axis =0)
+                        incom_labels = np.append(labels,[float(trigger[0])], axis =0)
+                        if float(trigger[2]) == 0:
+                            print('sitting condition exists!!!!!')
+                        index += 1
+                    index = 0
 
                 for idx,timestep in enumerate(timesteps):
                     if timestep-window_size-1 >= 0:
@@ -61,7 +62,7 @@ class EnableDataset(Dataset):
                         # img = cv2.resize(img.transpose(1,2,0), None, fx=2, fy=2).transpose(2,0,1)
                         img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
                         img=np.reshape(img,(3,107,16*6))
-                        self.dataset.append((img,labels[idx]))
+                        self.dataset.append((img,[labels[idx],incom_labels[idx]]))
 
                 # print(filename, "has been loaded")
         print("load dataset done")
