@@ -11,27 +11,96 @@ from torch.utils.data import Dataset, Subset, DataLoader, random_split
 
 from dataset import EnableDataset
 
+from tempfile import TemporaryFile
+import pickle
+
+# from sampler import StratifiedSampler
+from sampler2 import ImbalancedDatasetSampler
+
+########## SETTINGS  ########################
+
+numb_class = 6
+num_epoch = 1
+
+BATCH_SIZE = 32
+LEARNING_RATE = 1e-4
+WEIGHT_DECAY = 1e-4
+
+
+############################################
+
+def save_object(obj, filename):
+    with open(filename, 'wb') as output:  # Overwrites any existing file.
+        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
 
 
 # Load the dataset and train, val, test splits
 print("Loading datasets...")
 
-BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,48),window_size=500,processed=True)
-BIO_val= EnableDataset(subject_list= ['156','185','186','189','190', '191', '192', '193', '194'],data_range=(48,49),window_size=500,processed=True)
-BIO_test= EnableDataset(subject_list= ['156','185','189','190', '192', '193', '194'],data_range=(49,50),window_size=500,processed=True)
+## calling for the first time
+# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,48),window_size=500,processed=True)
+# BIO_val= EnableDataset(subject_list= ['156','185','186','189','190', '191', '192', '193', '194'],data_range=(48,49),window_size=500,processed=True)
+# BIO_test= EnableDataset(subject_list= ['156','185','189','190', '192', '193', '194'],data_range=(49,50),window_size=500,processed=True)
 
-# Create dataloaders
-# TODO: Experiment with different batch sizes
-trainloader = DataLoader(BIO_train, batch_size=32, shuffle=True)
+
+## saving dataset a file
+# outfile = TemporaryFile()
+# np.savez(outfile, BIO_train=BIO_train, BIO_val=BIO_val,BIO_test=BIO_test)
+# npzfile = np.load(outfile)
+# BIO_train,BIO_val,BIO_test = npzfile.files
+# save_object(BIO_train, 'BIO_train.pkl')
+# save_object(BIO_val, 'BIO_val.pkl')
+# save_object(BIO_test, 'BIO_test.pkl')
+
+## load from saved files
+with open('BIO_train.pkl', 'rb') as input:
+    BIO_train = pickle.load(input)
+with open('BIO_val.pkl', 'rb') as input:
+    BIO_val = pickle.load(input)
+with open('BIO_test.pkl', 'rb') as input:
+    BIO_test = pickle.load(input)
+
+
+## check the class distribution
+
+trainloader = DataLoader(BIO_train, shuffle=False,batch_size=BATCH_SIZE)
 classes = [0,0,0,0,0,0,0]
 for data, labels in trainloader:
     for x in range(labels.size()[0]):
         classes[labels[x]] +=1
+        # print(labels)
 print(classes)
-valloader = DataLoader(BIO_val, batch_size=32)
-testloader = DataLoader(BIO_test, batch_size=32)
 
-numb_class = 7
+classes= classes[1:]
+
+
+## with sample
+
+sum_classes = np.sum(classes)
+weights = [sum_classes/idx  for idx in classes]
+print(weights)
+
+idx =0
+weight_samples = [0] * len(BIO_train)  
+for val, target in BIO_train:
+        target= target.numpy()
+        target = int(target)
+        weight_samples[idx] = weights[target-1]  
+        idx +=1
+
+
+weight_samples= torch.DoubleTensor(weight_samples)   
+sampler = torch.utils.data.sampler.WeightedRandomSampler(weight_samples, len(weight_samples)) 
+# weights = torch.DoubleTensor(weights) 
+trainloader = DataLoader(BIO_train, shuffle=False, sampler=sampler,batch_size=BATCH_SIZE)
+valloader = DataLoader(BIO_val, shuffle=False,batch_size=BATCH_SIZE)
+testloader = DataLoader(BIO_test, shuffle=False,batch_size=BATCH_SIZE)
+
+
+## with no sampler
+# trainloader = DataLoader(BIO_train, batch_size=32, shuffle=True)
+# valloader = DataLoader(BIO_val, batch_size=32,shuffle=True)
+# testloader = DataLoader(BIO_test, batch_size=32,shuffle=True)
 
 
 class Network(nn.Module):
@@ -92,10 +161,7 @@ model = model.to(device)
 model.eval()
 criterion = nn.CrossEntropyLoss() # Specify the loss layer
 # TODO: Modify the line below, experiment with different optimizers and parameters (such as learning rate)
-optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
-
-num_epoch = 40
-
+optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
 
 
 # TODO: Choose an appropriate number of training epochs
@@ -114,6 +180,7 @@ def train(model, loader, num_epoch = 20): # Train the model
             # label = label.float()
             # plt.imshow(batch.cpu().detach().numpy().transpose(2,1,0))
             # plt.show()
+            label = label -1 # indexing start from 1 (removing sitting conditon)
             optimizer.zero_grad() # Clear gradients from the previous iteration
             pred = model(batch) # This will call Network.forward() that you implement
             loss = criterion(pred, label) # Calculate the loss
@@ -135,6 +202,7 @@ def evaluate(model, loader): # Evaluate accuracy on validation / test set
             batch = batch.to(device)
             label = label.to(device)
             pred = model(batch)
+            label = label-1
             correct += (torch.argmax(pred,dim=1)==label).sum().item()
     acc = correct/len(loader.dataset)
     print("Evaluation accuracy: {}".format(acc))
@@ -144,10 +212,11 @@ loss_history, val_history =train(model, trainloader, num_epoch)
 print("Evaluate on validation set...")
 evaluate(model, valloader)
 print("Evaluate on test set")
-acc2=evaluate(model, testloader)
+evaluate(model, testloader)
 
-np.savetxt('history.txt',(loss_history,val_history))
-np.savetxt('test_accuracy.txt',acc2)
+np.savetxt('loss_history.txt',loss_history)
+np.savetxt('val_history.txt',val_history)
+# np.savetxt('test_accuracy.txt',acc2)
 
 
 fig =plt.figure()
@@ -162,7 +231,7 @@ fig =plt.figure()
 plt.plot(val_history,label='vaidation accuracy')
 plt.xlabel('epoch')
 plt.ylabel('accuracy')
-list_idx = [ i for i in range(20)]
+list_idx = [ i for i in range(num_epco)]
 plt.xticks(np.array(list_idx))
 plt.legend()
 plt.show()

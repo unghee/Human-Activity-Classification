@@ -1,5 +1,13 @@
+
+*.jpg
+*.png
+*.txt
+*.pkl
+old/
+
+
 env/
-*.DS_Store/
+*.DS_Store
 Data/*
 *.jpg
 __pycache__/

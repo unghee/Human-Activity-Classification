@@ -23,7 +23,7 @@ class EnableDataset(Dataset):
         self.dataset = []
         self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
         for subjects in subject_list:
-            for i in tqdm(range(data_range[0], data_range[1])):
+            for i in range(data_range[0], data_range[1]):
                 filename = dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i
                 if not os.path.exists(filename):
                     print(filename, 'not found')
@@ -56,6 +56,7 @@ class EnableDataset(Dataset):
                         ## for debugging purpose
                         # plt.imshow(img)
                         # plt.show()
+                        # img = cv2.resize(img.transpose(1,2,0), None, fx=2, fy=2).transpose(2,0,1)
                         img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
                         img=np.reshape(img,(3,107,16*6))
                         self.dataset.append((img,labels[idx]))
