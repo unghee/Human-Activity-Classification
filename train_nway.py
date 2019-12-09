@@ -397,33 +397,33 @@ def evaluate(model,model2,model3 ,model4,model5,model6,loader): # Evaluate accur
             elif incom_label ==2:
                 pass 
                 pred =model2(batch)
-                pred_list=pred.tolist()
-                pred_list = [[pred[0,0],pred[0,1],-1000000,1000000,1000000,1000000]]
+                # pred_list=pred.tolist()
+                pred_list = [[float(pred[0,0]),float(pred[0,1]),-10.0**20,-10.0**20,-10.0**20,-10.0**20]]
                 pred = torch.LongTensor(np.array(pred_list))  
                              
             elif incom_label ==3:
                 # pass 
                 pred =model3(batch)
-                pred_list=pred.tolist()
-                pred_list = [[pred[0,0],-1000000,pred[0,1],-1000000,-1000000,1-000000]]
+                # pred_list=pred.tolist()
+                pred_list = [[float(pred[0,0]),-10.0**20,float(pred[0,1]),-10.0**20,-10.0**20,10.0**20]]
                 pred = torch.LongTensor(np.array(pred_list))
             elif incom_label==4:
                 # pass 
                 pred =model4(batch)
-                pred_list=pred.tolist()
-                pred_list = [[pred[0,0],-1000000,-1000000,pred[0,1],-1000000,-1000000]]
+                # pred_list=pred.tolist()
+                pred_list = [[float(pred[0,0]),-10.0**20,-10.0**20,float(pred[0,1]),-10.0**20,-10.0**20]]
                 pred = torch.LongTensor(np.array(pred_list))
             elif incom_label ==5:
                 # pass 
                 pred =model5(batch)
-                pred_list=pred.tolist()
-                pred_list = [[pred[0,0],-1000000,-1000000,-1000000,pred[0,1],-1000000]]
+                # pred_list=pred.tolist()
+                pred_list = [[float(pred[0,0]),-10.0**20,-10.0**20,-10.0**20,float(pred[0,1]),-10.0**20]]
                 pred = torch.LongTensor(np.array(pred_list))
             elif incom_label ==6:
                 # pass 
                 pred =model6(batch)
-                pred_list=pred.tolist()
-                pred_list = [[pred[0,0],-1000000,-1000000,-1000000,-1000000,pred[0,1]]]
+                # pred_list=pred.tolist()
+                pred_list = [[float(pred[0,0]),-10.0**20,-10.0**20,-10.0**20,-10.0**20,float(pred[0,1])]]
                 pred = torch.LongTensor(np.array(pred_list))
 
 
