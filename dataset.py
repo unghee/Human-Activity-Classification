@@ -22,9 +22,9 @@ class EnableDataset(Dataset):
         self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
         # subject_list= ['156','185']
         self.dataset = []
-        for subjects in subject_list:
+        for subjects, ranges in zip(subject_list, data_range):
             print(subjects)
-            for i in range(data_range[0], data_range[1]):   
+            for i in range(1, ranges):   
                 raw_data = pd.read_csv(dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i)
 
 
@@ -82,10 +82,10 @@ class EnableDataset(Dataset):
                     if timestep-window_size-1 >= 0:
                         # labels = np.append(labels, [raw_data.loc[timestep, 'Mode']], axis=0)
                         data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
-                        img= self.spectrogram2(data)
-                        img = cv2.resize(img.transpose(1,2,0), None, fx=2, fy=2).transpose(2,0,1)
+                        img= self.spectrogram2(data)/128.0-1.0
+                        #img = cv2.resize(img.transpose(1,2,0), None, fx=2, fy=2).transpose(2,0,1)
                         #print(img.shape)
-                        #cv2.imshow("img", img)
+                        #cv2.imshow("img", img.transpose(1,2,0))
                         #cv2.waitKey(0)
                         # f, t, Sxx = signal.spectrogram(data, 500)
                         # Pxx, freqs, bins, im = plt.specgram(data, Fs=500)
@@ -104,49 +104,27 @@ class EnableDataset(Dataset):
         img, label = self.dataset[index]
         return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
 
-    def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=20, overlap = 10):
-        vals1 = []
-        for x in range(3):
-            row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=overlap)
-            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
-            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
-            Sxx = Sxx/np.max(Sxx)*255
-            vals1.append(Sxx)
-        vals2 = []
-        for x in range(6,9):
-            row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=overlap)
-            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
-            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
-            Sxx = Sxx/np.max(Sxx)*255
-            vals2.append(Sxx)
-        vals3 = []
-        for x in range(9,12):
-            row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=overlap)
-            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
-            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
-            Sxx = Sxx/np.max(Sxx)*255
-            vals3.append(Sxx)
-        vals4 =[]
-        for x in range(12,15):
-            row = segmented_data[:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=overlap)
-            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
-            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
-            Sxx = Sxx/np.max(Sxx)*255
-            vals4.append(Sxx)
+    def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
+        #vals=[[],[],[],[],[],[]]
+        vals = []
+        for i in range(0,17):
+	        for x in range(3*i,3*(i+1)):
+	            row = segmented_data[:,x]
+	            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
+	            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
+	            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
+	            Sxx = Sxx/np.max(Sxx)*255
+	            vals.append(Sxx)
+        #print(vals[0][0].shape)
 
-        out1 = np.stack(vals1)
-        out2 = np.stack(vals2)
-        out3 = np.stack(vals3)
-        out4 = np.stack(vals4)
-        out = np.hstack((out1, out2,out3,out4))
-
-        out = np.flipud(out)
-
+        #layer1 = np.hstack((np.vstack((vals[0][0],vals[1][0],vals[2][0])), np.vstack((vals[0][0],vals[1][0],vals[2][0]))))
+        #layer2 = np.hstack((np.vstack((vals[0][1],vals[1][1],vals[2][1])), np.vstack((vals[0][1],vals[1][1],vals[2][1]))))
+        #layer3 = np.hstack((np.vstack((vals[0][2],vals[1][2],vals[2][2])), np.vstack((vals[0][2],vals[1][2],vals[2][2]))))
+        #out = np.stack((layer1, layer2, layer3), axis=0)
+        out = np.stack(vals, axis=0)
+        #print(out.shape)
         out=out.astype(np.uint8)
+        #print(out.shape)
         return out
 
 
