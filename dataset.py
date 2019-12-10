@@ -34,6 +34,7 @@ class EnableDataset(Dataset):
 
                 segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
                 labels = np.array([], dtype=np.int64)
+                incom_labels = np.array([], dtype=np.int64)
                 timesteps = []
                 triggers = []
                 index = 0
@@ -46,7 +47,9 @@ class EnableDataset(Dataset):
                         trigger=str(int(trigger))
                         triggers.append(trigger) # triggers can be used to compare translational and steady-state error
                         labels = np.append(labels,[float(trigger[2])], axis =0)
-                        incom_labels = np.append(labels,[float(trigger[0])], axis =0)
+                        incom_labels = np.append(incom_labels,[float(trigger[0])], axis =0)
+                        # if float(trigger[0]) != float(trigger[2]):
+                        #     print('transitional!!')
                         if float(trigger[2]) == 0:
                             print('sitting condition exists!!!!!')
                         index += 1
@@ -55,13 +58,12 @@ class EnableDataset(Dataset):
                 for idx,timestep in enumerate(timesteps):
                     if timestep-window_size-1 >= 0:
                         data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
-                        img= self.spectrogram2(data)
-                        ## for debugging purpose
-                        # plt.imshow(img)
-                        # plt.show()
-                        # img = cv2.resize(img.transpose(1,2,0), None, fx=2, fy=2).transpose(2,0,1)
-                        img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
-                        img=np.reshape(img,(3,107,16*6))
+                        # img= self.spectrogram2(data)
+                        # img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
+                        # img=np.reshape(img,(3,107,16*6))
+
+                        img= self.spectrogram2(data)/128.0-1.0
+
                         self.dataset.append((img,[labels[idx],incom_labels[idx]]))
 
                 # print(filename, "has been loaded")
@@ -80,28 +82,43 @@ class EnableDataset(Dataset):
             img = np.array(img)
         return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
 
-    def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=10):
+    def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
 
         vals=[]
-        for i in range(0,17):
-        	vals.append([])
-	        for x in range(3*i,3*(i+1)):
-	            row = segmented_data[:,x]
-	            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
-	            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
-	            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
-	            Sxx = Sxx/np.max(Sxx)*255
-	            vals[i].append(Sxx)
+        # for i in range(0,17):
+        # 	vals.append([])
+	       #  for x in range(3*i,3*(i+1)):
+	       #      row = segmented_data[:,x]
+	       #      f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
+	       #      tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
+	       #      Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
+	       #      Sxx = Sxx/np.max(Sxx)*255
+	       #      vals[i].append(Sxx)
 
-        outs =[]*17
-        for i in range(0,17):
-        	outs.append(np.stack(vals[i], axis=2))
-        out = np.empty((6,29,3), dtype=float)
-        for i in range(0,17):
-        	out = np.hstack((out,outs[i]))	
+        # outs =[]*17
+        # for i in range(0,17):
+        # 	outs.append(np.stack(vals[i], axis=2))
+        # out = np.empty((6,29,3), dtype=float)
+        # for i in range(0,17):
+        # 	out = np.hstack((out,outs[i]))	
 
-        out = np.flipud(out)
+        # out = np.flipud(out)
+        # out=out.astype(np.uint8)
+
+        for i in range(0,17):
+            for x in range(3*i,3*(i+1)):
+                row = segmented_data[:,x]
+                f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
+                tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
+                Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
+                Sxx = Sxx/np.max(Sxx)*255
+                vals.append(Sxx)
+
+
+        out = np.stack(vals, axis=0)
         out=out.astype(np.uint8)
+
+
         return out
 
 

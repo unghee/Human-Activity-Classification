@@ -14,7 +14,9 @@ from dataset import EnableDataset
 from tempfile import TemporaryFile
 import pickle
 from skimage import io, transform
+import pdb
 
+from networks import Network
 
 ########## SETTINGS  ########################
 
@@ -46,23 +48,25 @@ def save_object(obj, filename):
 print("Loading datasets...")
 
 ## calling for the first time
-BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,48),window_size=500,processed=True)
-BIO_val= EnableDataset(subject_list= ['156','185','186','189','190', '191', '192', '193', '194'],data_range=(48,49),window_size=500,processed=True)
-BIO_test= EnableDataset(subject_list= ['156','185','189','190', '192', '193', '194'],data_range=(49,50),window_size=500,processed=True)
-# BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,5),window_size=500,processed=True,transform=transforms.Compose([
+# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,48),window_size=500,processed=True)
+# BIO_val= EnableDataset(subject_list= ['156','185','186','189','190', '191', '192', '193', '194'],data_range=(48,49),window_size=500,processed=True)
+# BIO_test= EnableDataset(subject_list= ['156','185','189','190', '192', '193', '194'],data_range=(49,50),window_size=500,processed=True)
+# BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,3),window_size=500,processed=True,transform=transforms.Compose([
 #                                                transforms.RandomVerticalFlip(p=0.5),
 #                                                transforms.RandomHorizontalFlip()
 #                                            ]))
-# BIO_val= EnableDataset(subject_list= ['156'],data_range=(48,49),window_size=500,processed=True)
-# BIO_test= EnableDataset(subject_list= ['156'],data_range=(49,50),window_size=500,processed=True)
+BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,5),window_size=500,processed=True)
+
+BIO_val= EnableDataset(subject_list= ['156'],data_range=(48,49),window_size=500,processed=True)
+BIO_test= EnableDataset(subject_list= ['156'],data_range=(49,50),window_size=500,processed=True)
 
 
 
 # ## saving dataset a file
 
-save_object(BIO_train, 'BIO_train_.pkl')
-save_object(BIO_val, 'BIO_val_.pkl')
-save_object(BIO_test, 'BIO_test_.pkl')
+# save_object(BIO_train, 'BIO_train_.pkl')
+# save_object(BIO_val, 'BIO_val_.pkl')
+# save_object(BIO_test, 'BIO_test_.pkl')
 
 # ## load from saved files
 # with open('BIO_train_.pkl', 'rb') as input:
@@ -116,51 +120,6 @@ testloader = DataLoader(BIO_test, shuffle=False,batch_size=BATCH_SIZE)
 # valloader = DataLoader(BIO_val, batch_size=32,shuffle=True)
 # testloader = DataLoader(BIO_test, batch_size=32,shuffle=True)
 
-class Network(nn.Module):
-    def __init__(self):
-        super().__init__()
-        # TODO: Design your own network, define layers here.
-        # Here We provide a sample of two-layer fully-connected network from HW4 Part3.
-        # Your solution, however, should contain convolutional layers.
-        # Refer to PyTorch documentations of torch.nn to pick your layers. (https://pytorch.org/docs/stable/nn.html)
-        # Some common Choices are: Linear, Conv2d, ReLU, MaxPool2d, AvgPool2d, Dropout
-        # If you have many layers, consider using nn.Sequential() to simplify your code
-        # self.fc1 = nn.Linear(28*28, 8) # from 28x28 input image to hidden layer of size 256
-        # self.fc2 = nn.Linear(8,10) # from hidden layer to 10 class scores
-        self.sclayer1 = nn.Sequential(
-            nn.Conv2d(3, 12, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2))
-        self.sclayer2 = nn.Sequential(
-            nn.Conv2d(12, 24, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            )
-        self.drop_out = nn.Dropout()
-        self.fc1 = nn.Linear( 1* 12 * 24, 500)
-        self.fc2 = nn.Linear(500, 7)
-
-
-    def forward(self,x):
-        # TODO: Design your own network, implement forward pass here
-        # x = x.view(-1,28*28) # Flatten each image in the batch
-        # x = self.fc1(x)
-        # relu = nn.ReLU() # No need to define self.relu because it contains no parameters
-        # x = relu(x)
-        # x = self.fc2(x)
-        # # The loss layer will be applied outside Network class
-        # x = x.view(-1,28,28,1)
-
-        # torch.Size([1, 3, 4, 51])
-        x = self.sclayer1(x) #torch.Size([1, 12, 2, 25])
-        x = self.sclayer2(x) #torch.Size([1, 24, 1, 12])
-        x = x.reshape(x.size(0), -1) 
-        # x = x.view(-1,7 * 7 * 32)
-        x = self.drop_out(x)
-        x = self.fc1(x)
-        x = self.fc2(x)
-
-        return x
 
 device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 print('GPU USED?',torch.cuda.is_available())
@@ -168,9 +127,11 @@ print('GPU USED?',torch.cuda.is_available())
 
 
 ################# MODEL1#####################
-model = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
-num_ftrs = model.fc.in_features
-model.fc = nn.Linear(num_ftrs, numb_class1)
+# model = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
+# num_ftrs = model.fc.in_features
+# model.fc = nn.Linear(num_ftrs, numb_class1)
+
+model = Network()
 
 model = model.to(device)
 model.eval()
@@ -180,9 +141,11 @@ optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT
 
 
 ################# MODEL2#####################
-model2 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
-num_ftrs = model2.fc.in_features
-model2.fc = nn.Linear(num_ftrs, numb_class2)
+# model2 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
+# num_ftrs = model2.fc.in_features
+# model2.fc = nn.Linear(num_ftrs, numb_class2)
+
+model2 = Network()
 
 model2 = model2.to(device)
 model2.eval()
@@ -192,9 +155,12 @@ optimizer2 = optim.Adam(model2.parameters(), lr=LEARNING_RATE, weight_decay=WEIG
 
 
 ################# MODEL3#####################
-model3 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
-num_ftrs = model3.fc.in_features
-model3.fc = nn.Linear(num_ftrs, numb_class3)
+# model3 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
+# num_ftrs = model3.fc.in_features
+# model3.fc = nn.Linear(num_ftrs, numb_class3)
+
+
+model3 = Network()
 
 model3 = model3.to(device)
 model3.eval()
@@ -204,9 +170,11 @@ optimizer3 = optim.Adam(model3.parameters(), lr=LEARNING_RATE, weight_decay=WEIG
 
 
 ################# MODEL4#####################
-model4 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
-num_ftrs = model4.fc.in_features
-model4.fc = nn.Linear(num_ftrs, numb_class4)
+# model4 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
+# num_ftrs = model4.fc.in_features
+# model4.fc = nn.Linear(num_ftrs, numb_class4)
+
+model4 = Network()
 
 model4 = model4.to(device)
 model4.eval()
@@ -215,9 +183,11 @@ criterion4 = nn.CrossEntropyLoss() # Specify the loss layer
 optimizer4 = optim.Adam(model4.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
 
 ################# MODEL5#####################
-model5 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
-num_ftrs = model5.fc.in_features
-model5.fc = nn.Linear(num_ftrs, numb_class5)
+# model5 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
+# num_ftrs = model5.fc.in_features
+# model5.fc = nn.Linear(num_ftrs, numb_class5)
+
+model5 = Network()
 
 model5 = model5.to(device)
 model5.eval()
@@ -227,9 +197,12 @@ optimizer5 = optim.Adam(model5.parameters(), lr=LEARNING_RATE, weight_decay=WEIG
 
 
 ################# MODEL6#####################
-model6 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
-num_ftrs = model6.fc.in_features
-model6.fc = nn.Linear(num_ftrs, numb_class6)
+# model6 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
+# num_ftrs = model6.fc.in_features
+# model6.fc = nn.Linear(num_ftrs, numb_class6)
+
+
+model6 = Network()
 
 model6 = model5.to(device)
 model6.eval()
@@ -391,7 +364,7 @@ def evaluate(model,model2,model3 ,model4,model5,model6,loader): # Evaluate accur
             batch = batch.to(device)
             labels = label.to(device) 
             label = labels[0,0]
-            incom_label = labels[0,1]          
+            incom_label = labels[0,1]        
             if incom_label ==1:
                 pred = model(batch)
             elif incom_label ==2:
