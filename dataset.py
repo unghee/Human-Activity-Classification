@@ -127,6 +127,25 @@ class EnableDataset(Dataset):
         #print(out.shape)
         return out
 
+    def cwt(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
+        vals = []
+        for i in range(0,17):
+            for x in range(3*i,3*(i+1)):
+                row = segmented_data[:,x]
+                widths = np.arange(1,101)
+                cwtmatr = signal.cwt(row, signal.ricker, widths)
+                print(cwtmatr.shape, np.min(cwtmatr), np.max(cwtmatr))
+                cwtmatr = cwtmatr-np.min(cwtmatr)
+                cwtmatr = cwtmatr/np.max(cwtmatr)*255
+                vals.append(cwtmatr)
+
+
+        out = np.stack(vals, axis=0)
+        #print(out.shape)
+        out=out.astype(np.uint8)
+        #print(out.shape)
+        return out
+
 
     def spectrogram(self, segmented_data, fs=500, hamming_windowsize=10):
         vals1 = []

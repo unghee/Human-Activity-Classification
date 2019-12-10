@@ -100,7 +100,7 @@ model = model.to(device)
 #model.eval()
 weights = torch.FloatTensor([0.0, 1.0, 9693/2609, 9693/3250, 9693/1181, 9693/1133, 9693/530 ])
 weights = weights.to(device)
-criterion = nn.CrossEntropyLoss() # Specify the loss layer
+criterion = nn.CrossEntropyLoss(weight=weights) # Specify the loss layer
 # TODO: Modify the line below, experiment with different optimizers and parameters (such as learning rate)
 optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-3) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
 num_epoch = 60
@@ -139,6 +139,8 @@ def train(model, loader, num_epoch = 20): # Train the model
 def evaluate(model, loader): # Evaluate accuracy on validation / test set
     model.eval() # Set the model to evaluation mode
     correct = 0
+    labels = [0,0,0,0,0,0,0]
+    totalcount = [0,0,0,0,0,0,0]
     with torch.no_grad(): # Do not calculate grident to speed up computation
         count = 0
         totalloss = 0
