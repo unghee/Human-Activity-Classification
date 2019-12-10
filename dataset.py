@@ -17,7 +17,7 @@ import torchvision.transforms.functional as F
 
 
 class EnableDataset(Dataset):
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, stride=500, delay=500, processed=False,transform=None):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, stride=500, delay=500, processed=True, transform=None):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -54,14 +54,13 @@ class EnableDataset(Dataset):
                 for idx,timestep in enumerate(timesteps):
                     if timestep-window_size-1 >= 0:
                         data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
-                        img= self.spectrogram2(data)
-                        ## for debugging purpose
-                        # plt.imshow(img)
-                        # plt.show()
-                        # img = cv2.resize(img.transpose(1,2,0), None, fx=2, fy=2).transpose(2,0,1)
-                        img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
-                        img=np.reshape(img,(3,107,16*6))
-                        self.dataset.append((img,labels[idx]))
+                        if processed:
+                            img= self.spectrogram2(data)
+                            img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
+                            img=np.reshape(img,(3,107,16*6))
+                            self.dataset.append((img,labels[idx]))
+                        else:
+                            self.dataset.append((data.T,labels[idx]))
 
                 # print(filename, "has been loaded")
         print("load dataset done")
@@ -97,7 +96,7 @@ class EnableDataset(Dataset):
         	outs.append(np.stack(vals[i], axis=2))
         out = np.empty((6,29,3), dtype=float)
         for i in range(0,17):
-        	out = np.hstack((out,outs[i]))	
+        	out = np.hstack((out,outs[i]))
 
         out = np.flipud(out)
         out=out.astype(np.uint8)
