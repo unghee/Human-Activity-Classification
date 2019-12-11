@@ -48,8 +48,8 @@ class EnableDataset(Dataset):
                         triggers.append(trigger) # triggers can be used to compare translational and steady-state error
                         labels = np.append(labels,[float(trigger[2])], axis =0)
                         incom_labels = np.append(incom_labels,[float(trigger[0])], axis =0)
-                        # if float(trigger[0]) != float(trigger[2]):
-                        #     print('transitional!!')
+                        if float(trigger[0]) != float(trigger[2]):
+                            print('transitional!!')
                         if float(trigger[2]) == 0:
                             print('sitting condition exists!!!!!')
                         index += 1

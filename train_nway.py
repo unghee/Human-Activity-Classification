@@ -27,10 +27,10 @@ numb_class3 = 2
 numb_class4 = 2
 numb_class5 = 2
 numb_class6 = 2
-
+num_input_channel=51
 # numb_class = 6
 
-num_epoch = 4
+num_epoch = 40
 
 BATCH_SIZE = 1
 LEARNING_RATE = 1e-4
@@ -55,26 +55,26 @@ print("Loading datasets...")
 #                                                transforms.RandomVerticalFlip(p=0.5),
 #                                                transforms.RandomHorizontalFlip()
 #                                            ]))
-BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,5),window_size=500,processed=True)
+# BIO_train= EnableDataset(subject_list= ['156','185'],data_range=(1,5),window_size=500,processed=True)
 
-BIO_val= EnableDataset(subject_list= ['156'],data_range=(48,49),window_size=500,processed=True)
-BIO_test= EnableDataset(subject_list= ['156'],data_range=(49,50),window_size=500,processed=True)
+# BIO_val= EnableDataset(subject_list= ['156'],data_range=(48,49),window_size=500,processed=True)
+# BIO_test= EnableDataset(subject_list= ['156'],data_range=(49,50),window_size=500,processed=True)
 
 
 
 # ## saving dataset a file
 
-# save_object(BIO_train, 'BIO_train_.pkl')
-# save_object(BIO_val, 'BIO_val_.pkl')
-# save_object(BIO_test, 'BIO_test_.pkl')
+# save_object(BIO_train, 'BIO_train_newspecto.pkl')
+# save_object(BIO_val, 'BIO_val_newspecto.pkl')
+# save_object(BIO_test, 'BIO_test_newspecto.pkl')
 
 # ## load from saved files
-# with open('BIO_train_.pkl', 'rb') as input:
-#     BIO_train = pickle.load(input)
-# with open('BIO_val_.pkl', 'rb') as input:
-#     BIO_val = pickle.load(input)
-# with open('BIO_test_.pkl', 'rb') as input:
-#     BIO_test = pickle.load(input)
+with open('Data/BIO_train_newspecto.pkl', 'rb') as input:
+    BIO_train = pickle.load(input)
+with open('Data/BIO_val_newspecto.pkl', 'rb') as input:
+    BIO_val = pickle.load(input)
+with open('Data/BIO_test_newspecto.pkl', 'rb') as input:
+    BIO_test = pickle.load(input)
 
 
 ## check the class distribution
@@ -127,11 +127,18 @@ print('GPU USED?',torch.cuda.is_available())
 
 
 ################# MODEL1#####################
-# model = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
-# num_ftrs = model.fc.in_features
-# model.fc = nn.Linear(num_ftrs, numb_class1)
+conv1 = nn.Conv2d(num_input_channel, 3, kernel_size=7, stride=2, padding=3,bias=False)
 
-model = Network()
+model = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
+num_ftrs = model.fc.in_features
+model.fc = nn.Linear(num_ftrs, numb_class1)
+
+model = nn.Sequential(conv1,model)
+
+
+# model = Network()
+
+
 
 model = model.to(device)
 model.eval()
@@ -141,11 +148,12 @@ optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT
 
 
 ################# MODEL2#####################
-# model2 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
-# num_ftrs = model2.fc.in_features
-# model2.fc = nn.Linear(num_ftrs, numb_class2)
+model2 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
+num_ftrs = model2.fc.in_features
+model2.fc = nn.Linear(num_ftrs, numb_class2)
+# model2 = nn.Sequential(conv1,model2)
 
-model2 = Network()
+# model2 = Network()
 
 model2 = model2.to(device)
 model2.eval()
@@ -155,12 +163,12 @@ optimizer2 = optim.Adam(model2.parameters(), lr=LEARNING_RATE, weight_decay=WEIG
 
 
 ################# MODEL3#####################
-# model3 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
-# num_ftrs = model3.fc.in_features
-# model3.fc = nn.Linear(num_ftrs, numb_class3)
+model3 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
+num_ftrs = model3.fc.in_features
+model3.fc = nn.Linear(num_ftrs, numb_class3)
+model3 = nn.Sequential(conv1,model3)
 
-
-model3 = Network()
+# model3 = Network()
 
 model3 = model3.to(device)
 model3.eval()
@@ -170,11 +178,11 @@ optimizer3 = optim.Adam(model3.parameters(), lr=LEARNING_RATE, weight_decay=WEIG
 
 
 ################# MODEL4#####################
-# model4 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
-# num_ftrs = model4.fc.in_features
-# model4.fc = nn.Linear(num_ftrs, numb_class4)
-
-model4 = Network()
+model4 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
+num_ftrs = model4.fc.in_features
+model4.fc = nn.Linear(num_ftrs, numb_class4)
+model4 = nn.Sequential(conv1,model4)
+# model4 = Network()
 
 model4 = model4.to(device)
 model4.eval()
@@ -183,11 +191,11 @@ criterion4 = nn.CrossEntropyLoss() # Specify the loss layer
 optimizer4 = optim.Adam(model4.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
 
 ################# MODEL5#####################
-# model5 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
-# num_ftrs = model5.fc.in_features
-# model5.fc = nn.Linear(num_ftrs, numb_class5)
-
-model5 = Network()
+model5 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
+num_ftrs = model5.fc.in_features
+model5.fc = nn.Linear(num_ftrs, numb_class5)
+model5 = nn.Sequential(conv1,model5)
+# model5 = Network()
 
 model5 = model5.to(device)
 model5.eval()
@@ -197,12 +205,12 @@ optimizer5 = optim.Adam(model5.parameters(), lr=LEARNING_RATE, weight_decay=WEIG
 
 
 ################# MODEL6#####################
-# model6 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
-# num_ftrs = model6.fc.in_features
-# model6.fc = nn.Linear(num_ftrs, numb_class6)
+model6 = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
+num_ftrs = model6.fc.in_features
+model6.fc = nn.Linear(num_ftrs, numb_class6)
+model6 = nn.Sequential(conv1,model6)
 
-
-model6 = Network()
+# model6 = Network()
 
 model6 = model5.to(device)
 model6.eval()
@@ -210,7 +218,19 @@ criterion6 = nn.CrossEntropyLoss() # Specify the loss layer
 # TODO: Modify the line below, experiment with different optimizers and parameters (such as learning rate)
 optimizer6 = optim.Adam(model6.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
 
-
+def deactivate_batchnorm(m):
+    if isinstance(m, nn.BatchNorm2d):
+        m.reset_parameters()
+        m.eval()
+        with torch.no_grad():
+            m.weight.fill_(1.0)
+            m.bias.zero_()
+model.apply(deactivate_batchnorm)
+model2.apply(deactivate_batchnorm)
+model3.apply(deactivate_batchnorm)
+model4.apply(deactivate_batchnorm)
+model5.apply(deactivate_batchnorm)
+model6.apply(deactivate_batchnorm)
 
 def train(model, loader, num_epoch = 20): # Train the model
     loss_history=[]
@@ -227,6 +247,12 @@ def train(model, loader, num_epoch = 20): # Train the model
     model4.train()
     model5.train()
     model6.train()
+    model.apply(deactivate_batchnorm)
+    model2.apply(deactivate_batchnorm)
+    model3.apply(deactivate_batchnorm)
+    model4.apply(deactivate_batchnorm)
+    model5.apply(deactivate_batchnorm)
+    model6.apply(deactivate_batchnorm)
 
     for i in range(num_epoch):
         running_loss = []
