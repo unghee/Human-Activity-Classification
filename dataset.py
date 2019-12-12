@@ -17,7 +17,7 @@ import torchvision.transforms.functional as F
 
 
 class EnableDataset(Dataset):
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, stride=500, delay=500, processed=True, transform=None):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, stride=500, delay=500, processed=True, label=None, transform=None):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -41,17 +41,20 @@ class EnableDataset(Dataset):
 
                 gait_events = ['Right_Heel_Contact','Right_Toe_Off','Left_Heel_Contact','Left_Toe_Off']
                 for event in gait_events:
-                	while not pd.isnull(raw_data.loc[index, event]):
-	                    timesteps.append(raw_data.loc[index, event])
-	                    trigger = raw_data.loc[index, event+'_Trigger']
-	                    trigger=str(int(trigger))
-	                    triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-	                    labels = np.append(labels,[float(trigger[2])], axis =0)
-	                    self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
-	                    if float(trigger[2]) == 0:
-	                    	print('sitting condition exists!!!!!')
-	                    index += 1
-	                index = 0
+                    while not pd.isnull(raw_data.loc[index, event]):
+                        trigger = raw_data.loc[index, event+'_Trigger']
+                        trigger=str(int(trigger))
+                        if label is None or [float(trigger[0])] == label:
+                            timesteps.append(raw_data.loc[index, event])
+                            trigger = raw_data.loc[index, event+'_Trigger']
+                            trigger=str(int(trigger))
+                            triggers.append(trigger) # triggers can be used to compare translational and steady-state error
+                            labels = np.append(labels,[float(trigger[2])], axis =0)
+                            self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
+                            if float(trigger[2]) == 0:
+                                print('sitting condition exists!!!!!')
+                            index += 1
+                    index = 0
 
                 for idx,timestep in enumerate(timesteps):
                     if timestep-window_size-1 >= 0:
