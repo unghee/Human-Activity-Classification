@@ -21,6 +21,7 @@ class EnableDataset(Dataset):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
+        self.prev_label = np.array([], dtype=np.int64)
         self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
         self.transform = transform
 
@@ -46,6 +47,7 @@ class EnableDataset(Dataset):
 	                    trigger=str(int(trigger))
 	                    triggers.append(trigger) # triggers can be used to compare translational and steady-state error
 	                    labels = np.append(labels,[float(trigger[2])], axis =0)
+	                    self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
 	                    if float(trigger[2]) == 0:
 	                    	print('sitting condition exists!!!!!')
 	                    index += 1
