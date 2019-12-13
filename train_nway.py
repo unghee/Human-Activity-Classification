@@ -251,7 +251,7 @@ optimizer6 = optim.Adam(model6.parameters(), lr=LEARNING_RATE, weight_decay=WEIG
             # MODEL5: SD(5)-> LW(1), SD(5)
             # MODEL6: Stand(6)-> LW(1), SD(6)
 
-def train(model, loader, valloader, num_epoch = 20,label=None): # Train the model
+def train(model, loader, valloader, num_epoch = 20,label_no=None): # Train the model
     loss_history=[]
     val_history=[]
     print("Start training...")
@@ -264,6 +264,8 @@ def train(model, loader, valloader, num_epoch = 20,label=None): # Train the mode
             batch = batch.to(device)
             label = label.to(device)
             label = label -1 # indexing start from 1 (removing sitting conditon)
+            if label_no>2:
+                label = label/torch.LongTensor([label_no-1])
             optimizer.zero_grad() # Clear gradients from the previous iteration
             pred = model(batch) # This will call Network.forward() that you implement
             loss = criterion(pred, label) # Calculate the loss
@@ -273,13 +275,13 @@ def train(model, loader, valloader, num_epoch = 20,label=None): # Train the mode
             loss_history.append(np.mean(running_loss))
 
             # elif label ==2:
-        _,_,val_acc = evaluate(model, valloader,label)
+        _,_,val_acc = evaluate(model, valloader,label_no)
         val_history.append(val_acc)
         print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss),val_acc)) # Print the average loss for this epoch
     print("Done!")
     return loss_history, val_history
 
-def evaluate(model, loader,label): # Evaluate accuracy on validation / test set
+def evaluate(model, loader,label_no): # Evaluate accuracy on validation / test set
     model.eval() # Set the model to evaluation mode
     correct = 0
     with torch.no_grad(): # Do not calculate grident to speed up computation
@@ -288,30 +290,32 @@ def evaluate(model, loader,label): # Evaluate accuracy on validation / test set
             label = label.to(device)
             pred = model(batch)
             label = label-1
+            if label_no>2:
+                label = label/torch.LongTensor([label_no-1])
             correct += (torch.argmax(pred,dim=1)==label).sum().item()
     if len(loader.dataset) != 0:
         acc = correct/len(loader.dataset)
         print("Evaluation accuracy: {}".format(acc))
     else:
         acc =0
-        print('empty dataset!!', label)
+        print('empty dataset!!', label_no)
     return correct, len(loader.dataset), acc
 
-loss_history, val_history =train(model, trainloader1,valloader1, num_epoch,label=1)
-loss_history2, val_history2 =train(model2, trainloader2,valloader2, num_epoch,label=2)
-loss_history3, val_history3 =train(model3, trainloader3, valloader3,num_epoch,label=3)
-loss_history4, val_history4 =train(model4, trainloader4, valloader4,num_epoch,label=4)
-loss_history5, val_history5 =train(model5, trainloader5, valloader5,num_epoch,label=5)
-loss_history6, val_history6 =train(model6, trainloader6, valloader6,num_epoch,label=6)
+loss_history, val_history =train(model, trainloader1,valloader1, num_epoch,label_no=1)
+loss_history2, val_history2 =train(model2, trainloader2,valloader2, num_epoch,label_no=2)
+loss_history3, val_history3 =train(model3, trainloader3, valloader3,num_epoch,label_no=3)
+loss_history4, val_history4 =train(model4, trainloader4, valloader4,num_epoch,label_no=4)
+loss_history5, val_history5 =train(model5, trainloader5, valloader5,num_epoch,label_no=5)
+loss_history6, val_history6 =train(model6, trainloader6, valloader6,num_epoch,label_no=6)
 
 
 print("Evaluate on test set")
-corr1, len_data1,_ =evaluate(model, testloader1,label=1)
-corr2, len_data2,_ =evaluate(model2, testloader2,label=2)
-corr3, len_data3,_ =evaluate(model3, testloader3,label=3)
-corr4, len_data4,_ =evaluate(model4, testloader4,label=4)
-corr5, len_data5,_ =evaluate(model5, testloader5,label=5)
-corr6, len_data6,_ =evaluate(model6, testloader6,label=6)
+corr1, len_data1,_ =evaluate(model, testloader1,label_no=1)
+corr2, len_data2,_ =evaluate(model2, testloader2,label_no=2)
+corr3, len_data3,_ =evaluate(model3, testloader3,label_no=3)
+corr4, len_data4,_ =evaluate(model4, testloader4,label_no=4)
+corr5, len_data5,_ =evaluate(model5, testloader5,label_no=5)
+corr6, len_data6,_ =evaluate(model6, testloader6,label_no=6)
 
 corr_total = corr1+corr2+corr3+corr4+corr5+corr6
 len_data_total= len_data1+len_data2+len_data3+len_data4+len_data5+len_data6
