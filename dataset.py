@@ -44,7 +44,7 @@ class EnableDataset(Dataset):
                     while not pd.isnull(raw_data.loc[index, event]):
                         trigger = raw_data.loc[index, event+'_Trigger']
                         trigger=str(int(trigger))
-                        if label is None or [float(trigger[0])] == label:
+                        if label is None or float(trigger[0]) == label:
                             timesteps.append(raw_data.loc[index, event])
                             trigger = raw_data.loc[index, event+'_Trigger']
                             trigger=str(int(trigger))
@@ -53,16 +53,14 @@ class EnableDataset(Dataset):
                             self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
                             if float(trigger[2]) == 0:
                                 print('sitting condition exists!!!!!')
-                            index += 1
+                        index += 1
                     index = 0
 
                 for idx,timestep in enumerate(timesteps):
                     if timestep-window_size-1 >= 0:
                         data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
                         if processed:
-                            img= self.spectrogram2(data)
-                            img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
-                            img=np.reshape(img,(3,107,16*6))
+                            img= self.spectrogram2(data)/128.0-1.0
                             self.dataset.append((img,labels[idx]))
                         else:
                             self.dataset.append((data.T,labels[idx]))
@@ -83,28 +81,23 @@ class EnableDataset(Dataset):
             img = np.array(img)
         return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
 
-    def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=10):
+    def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
 
         vals=[]
         for i in range(0,17):
-        	vals.append([])
+        	# vals.append([])
 	        for x in range(3*i,3*(i+1)):
 	            row = segmented_data[:,x]
 	            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
 	            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
 	            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
 	            Sxx = Sxx/np.max(Sxx)*255
-	            vals[i].append(Sxx)
+	            vals.append(Sxx)
 
-        outs =[]*17
-        for i in range(0,17):
-        	outs.append(np.stack(vals[i], axis=2))
-        out = np.empty((6,29,3), dtype=float)
-        for i in range(0,17):
-        	out = np.hstack((out,outs[i]))
-
-        out = np.flipud(out)
+        out = np.stack(vals, axis=0)
         out=out.astype(np.uint8)
+
+
         return out
 
 
