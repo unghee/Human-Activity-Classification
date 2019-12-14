@@ -12,7 +12,7 @@ from torch.utils.data import Dataset, Subset, DataLoader, random_split
 
 
 class Network(nn.Module):
-    def __init__(self):
+    def __init__(self,output_dim=None):
         super().__init__()
         # TODO: Design your own network, define layers here.
         # Here We provide a sample of two-layer fully-connected network from HW4 Part3.
@@ -22,6 +22,7 @@ class Network(nn.Module):
         # If you have many layers, consider using nn.Sequential() to simplify your code
         # self.fc1 = nn.Linear(28*28, 8) # from 28x28 input image to hidden layer of size 256
         # self.fc2 = nn.Linear(8,10) # from hidden layer to 10 class scores
+        self.output_numb = output_dim
         self.sclayer1 = nn.Sequential(
             nn.Conv2d(51, 128, kernel_size=5, stride=1, padding=2),
             nn.ReLU(),
@@ -33,7 +34,7 @@ class Network(nn.Module):
             )
         self.drop_out = nn.Dropout()
         self.fc1 = nn.Linear( 4096, 2000)
-        self.fc2 = nn.Linear(2000, 7)
+        self.fc2 = nn.Linear(2000, self.output_numb)
 
 
     def forward(self,x):

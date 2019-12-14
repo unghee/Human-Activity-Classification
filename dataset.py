@@ -14,7 +14,7 @@ import numpy as np
 
 import os
 import torchvision.transforms.functional as F
-
+import pdb
 
 class EnableDataset(Dataset):
     def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, stride=500, delay=500, processed=True, label=None, transform=None):
@@ -44,6 +44,10 @@ class EnableDataset(Dataset):
                     while not pd.isnull(raw_data.loc[index, event]):
                         trigger = raw_data.loc[index, event+'_Trigger']
                         trigger=str(int(trigger))
+                        # if label == 2:
+                        #     if float(trigger[0]) == label:
+                        #         print(label,trigger[0])
+                        #         pdb.set_trace()
                         if label is None or float(trigger[0]) == label:
                             timesteps.append(raw_data.loc[index, event])
                             trigger = raw_data.loc[index, event+'_Trigger']
