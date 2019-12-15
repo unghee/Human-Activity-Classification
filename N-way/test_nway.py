@@ -14,7 +14,6 @@ from dataset import EnableDataset
 from tempfile import TemporaryFile
 import pickle
 from skimage import io, transform
-import pdb
 
 from networks import Network
 
@@ -58,7 +57,7 @@ print('GPU USED?',torch.cuda.is_available())
 
 #### MODE-SPECIFIC CLASSIFIER SCHEME
 # 1 : LW, 2:RA, 3:RD, 4:SA, 5:SD, 6:Stand
-# MODEL1: LW(1)-> LW(1), RA(2), RD(3), SA(4), SD(5), Stand(6) 
+# MODEL1: LW(1)-> LW(1), RA(2), RD(3), SA(4), SD(5), Stand(6)
 # MODEL2: RA(2)-> LW(1), RA(2)
 # MODEL3: RD(3)-> LW(1), RD(3)
 # MODEL4: SA(4)-> LW(1), SA(4)
@@ -76,8 +75,6 @@ def evaluate(model, loader,label_no): # Evaluate accuracy on validation / test s
             label = label-1
             if label_no>2:
                 label = label/torch.LongTensor([label_no-1])
-            # if label_no ==6:
-            #     pdb.set_trace()
             correct += (torch.argmax(pred,dim=1)==label).sum().item()
     if len(loader.dataset) != 0:
         acc = correct/len(loader.dataset)
@@ -102,7 +99,6 @@ for i in range(len_class):
 
 corr_total =0
 len_data_total=0
-# for i in range(len_class*2):
 for i in range(len_class):
     corr_total = corrs[i] + corr_total
     len_data_total = len_data_total + len_datas[i]
@@ -113,7 +109,6 @@ print("Total Evaluation accuracy: {}".format(acc_total))
 
 np.savetxt('loss_history.txt',loss_history)
 np.savetxt('val_history.txt',val_history)
-# np.savetxt('test_accuracy.txt',acc2)
 
 
 fig =plt.figure()
