@@ -48,8 +48,8 @@ class EnableDataset(Dataset):
                         #     if float(trigger[0]) == label:
                         #         print(label,trigger[0])
                         #         pdb.set_trace()
-                        # if label is None or (float(trigger[0]) == label and event[-7] == event_label and float(trigger[2]) != 6 ):
-                        if label is None or (float(trigger[0]) == label and float(trigger[2]) != 6 ):
+                        if label is None or (float(trigger[0]) == label and event[0]+event[-7] == event_label and float(trigger[2]) != 6 ):
+                        # if label is None or (float(trigger[0]) == label and float(trigger[2]) != 6 ):
                             if float(trigger[2]) == 6:
                                 print("standing condition detected!!")
                             timesteps.append(raw_data.loc[index, event])

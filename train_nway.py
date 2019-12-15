@@ -8,6 +8,7 @@ from torch import optim
 import torch.nn.functional as F
 from torchvision import datasets, transforms , utils
 from torch.utils.data import Dataset, Subset, DataLoader, random_split
+from torch.utils.data.sampler import SubsetRandomSampler
 
 from dataset import EnableDataset
 
@@ -68,6 +69,8 @@ with open('BIO_tests.pkl', 'rb') as input:
     BIO_tests = pickle.load(input)
 
 
+
+
 ## check the class distribution
 
 def weight_classes(dataset):
@@ -109,13 +112,39 @@ for i in range(len_class):
 # weight6=weight_classes(BIO_trains[5])
 # weights_list.append(torch.FloatTensor([weight6[0],weight6[2]]))
 
+
+validation_split = .2
+shuffle_dataset = True
+random_seed= 42
+
+# Creating data indices for training and validation splits:
+train_samplers=[]
+valid_samplers=[]
+for i in range(len_class):
+    dataset_size = len(BIO_trains[i])
+    indices = list(range(dataset_size))
+    split = int(np.floor(validation_split * dataset_size))
+    if shuffle_dataset :
+        np.random.seed(random_seed)
+        np.random.shuffle(indices)
+    train_indices, val_indices = indices[split:], indices[:split]
+
+    # Creating PT data samplers and loaders:
+    train_sampler = SubsetRandomSampler(train_indices)
+    valid_sampler = SubsetRandomSampler(val_indices)
+    train_samplers.append(train_sampler)
+    valid_samplers.append(valid_sampler)   
+
+
 trainloaders=[]
 valloaders=[]
 testloaders=[]
 
 for i in range(len_class):
-    trainloaders.append(DataLoader(BIO_trains[i], shuffle=False,batch_size=BATCH_SIZE))
-    valloaders.append(DataLoader(BIO_vals[i], shuffle=False,batch_size=BATCH_SIZE))
+# for i in range(0,1):
+    trainloaders.append(DataLoader(BIO_trains[i], shuffle=False,batch_size=BATCH_SIZE,sampler=train_sampler))
+    # valloaders.append(DataLoader(BIO_vals[i], shuffle=False,batch_size=BATCH_SIZE))
+    valloaders.append(DataLoader(BIO_trains[i], shuffle=False,batch_size=BATCH_SIZE,sampler=valid_sampler))
     testloaders.append(DataLoader(BIO_tests[i], shuffle=False,batch_size=BATCH_SIZE))
 
 
@@ -210,7 +239,8 @@ def evaluate(model, loader,label_no): # Evaluate accuracy on validation / test s
 
 loss_historys=[]
 val_historys=[]
-for i in range(len_class):
+# for i in range(len_class):
+for i in range(0,1):
         loss_history, val_history =train(models[i], criterions[i], optimizers[i], trainloaders[i], valloaders[i], num_epoch, label_no=i+1)
         loss_historys.append(loss_history)
         val_historys.append(val_history)
@@ -222,7 +252,8 @@ print("Evaluate on test set")
 
 corrs=[]
 len_datas=[]
-for i in range(len_class):
+# for i in range(len_class):
+for i in range(0,1):
         corr, len_data,_ =evaluate(models[i], testloaders[i],label_no=i+1 )
         corrs.append(corr)
         len_datas.append(len_data)
@@ -231,7 +262,8 @@ for i in range(len_class):
 corr_total =0
 len_data_total=0
 
-for i in range(len_class):
+# for i in range(len_class):
+for i in range(0,1):
     corr_total = corrs[i] + corr_total
     len_data_total = len_data_total + len_datas[i]
 

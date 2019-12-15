@@ -34,6 +34,7 @@ class Network(nn.Module):
             )
         self.drop_out = nn.Dropout()
         self.fc1 = nn.Linear( 4096, 2000)
+        # self.fc1 = nn.Linear( 2048, 2000) # 300
         self.fc2 = nn.Linear(2000, self.output_numb)
 
 
