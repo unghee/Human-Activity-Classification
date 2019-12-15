@@ -4,7 +4,7 @@
 *.txt
 *.pkl
 old/
-
+*.pth
 
 env/
 *.DS_Store

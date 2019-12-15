@@ -17,7 +17,7 @@ import torchvision.transforms.functional as F
 import pdb
 
 class EnableDataset(Dataset):
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, stride=500, delay=500, processed=True, label=None, transform=None):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, stride=500, delay=500, processed=True, label=None, event_label = None, transform=None):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -48,7 +48,10 @@ class EnableDataset(Dataset):
                         #     if float(trigger[0]) == label:
                         #         print(label,trigger[0])
                         #         pdb.set_trace()
-                        if label is None or float(trigger[0]) == label:
+                        # if label is None or (float(trigger[0]) == label and event[-7] == event_label and float(trigger[2]) != 6 ):
+                        if label is None or (float(trigger[0]) == label and float(trigger[2]) != 6 ):
+                            if float(trigger[2]) == 6:
+                                print("standing condition detected!!")
                             timesteps.append(raw_data.loc[index, event])
                             trigger = raw_data.loc[index, event+'_Trigger']
                             trigger=str(int(trigger))

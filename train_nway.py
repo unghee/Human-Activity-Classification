@@ -21,15 +21,15 @@ from networks import Network
 ########## SETTINGS  ########################
 
 ## for N way classifieres
-numb_class= [6,2,2,2,2,2]
-
+numb_class= [6,2,2,2,2]
+len_class = len(numb_class)
 
 # numb_class = 6
-
-num_epoch = 4
+SAVE_MODEL = False
+num_epoch = 1
 
 BATCH_SIZE = 32
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 1e-4*0.8
 WEIGHT_DECAY = 1e-4
 
 
@@ -43,29 +43,29 @@ def save_object(obj, filename):
 # Load the dataset and train, val, test splits
 print("Loading datasets...")
 
-BIO_trains=[]
-BIO_vals=[]
-BIO_tests=[]
-for i in range(6):
-    BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,48),window_size=500,processed=True,label=i+1))
-    BIO_vals.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(48,49),window_size=500,processed=True,label=i+1))
-    BIO_tests.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(49,50),window_size=500,processed=True,label=i+1))
-    
-
+# ['156','185','186','188','189','190', '191', '192', '193', '194']
+# BIO_trains=[]
+# BIO_vals=[]
+# BIO_tests=[]
+# for i in range(len_class):
+#     BIO_trains.append(EnableDataset(subject_list= ['156','185'],data_range=(1,4),window_size=500,processed=True,label=i+1))
+#     BIO_vals.append(EnableDataset(subject_list= ['156'],data_range=(40,46),window_size=500,processed=True,label=i+1))
+#     BIO_tests.append(EnableDataset(subject_list= ['156'],data_range=(46,50),window_size=500,processed=True,label=i+1))
+        
 
 # ## saving dataset a file
 
-save_object(BIO_trains, 'BIO_trains.pkl')
-save_object(BIO_vals, 'BIO_vals.pkl')
-save_object(BIO_tests, 'BIO_tests.pkl')
+# save_object(BIO_trains, 'BIO_trains_events.pkl')
+# save_object(BIO_vals, 'BIO_vals_events.pkl')
+# save_object(BIO_tests, 'BIO_tests_events.pkl')
 
 # ## load from saved files
-# with open('BIO_trains.pkl', 'rb') as input:
-#     BIO_trains = pickle.load(input)
-# with open('BIO_vals.pkl', 'rb') as input:
-#     BIO_vals = pickle.load(input)
-# with open('BIO_tests.pkl', 'rb') as input:
-#     BIO_tests = pickle.load(input)
+with open('BIO_trains.pkl', 'rb') as input:
+    BIO_trains = pickle.load(input)
+with open('BIO_vals.pkl', 'rb') as input:
+    BIO_vals = pickle.load(input)
+with open('BIO_tests.pkl', 'rb') as input:
+    BIO_tests = pickle.load(input)
 
 
 ## check the class distribution
@@ -78,8 +78,9 @@ def weight_classes(dataset):
         for x in range(labels.size()[0]):
             classes[labels[x]] +=1
             # print(labels)
-    # print(classes)
+    print(classes)
 
+    # classes= classes[1:-1]
     classes= classes[1:]
 
 
@@ -88,11 +89,11 @@ def weight_classes(dataset):
     sum_classes = np.sum(classes)
     for idx in classes:
         if idx != 0 :
-            # weights.append(sum_classes/idx)
-            weights.append(1)
+            weights.append(sum_classes/idx)
+            # weights.append(1)
         else:
             continue
-    print(weights)
+    # print(weights)
 
 
     weights = torch.FloatTensor(weights)
@@ -101,13 +102,18 @@ def weight_classes(dataset):
     return weights
 
 weights_list=[]
-for i in range(6):
+
+for i in range(len_class):
     weights_list.append(weight_classes(BIO_trains[i]))
+
+# weight6=weight_classes(BIO_trains[5])
+# weights_list.append(torch.FloatTensor([weight6[0],weight6[2]]))
 
 trainloaders=[]
 valloaders=[]
 testloaders=[]
-for i in range(6):
+
+for i in range(len_class):
     trainloaders.append(DataLoader(BIO_trains[i], shuffle=False,batch_size=BATCH_SIZE))
     valloaders.append(DataLoader(BIO_vals[i], shuffle=False,batch_size=BATCH_SIZE))
     testloaders.append(DataLoader(BIO_tests[i], shuffle=False,batch_size=BATCH_SIZE))
@@ -122,7 +128,7 @@ models =[]
 optimizers =[]
 criterions =[]
 
-for i in range(6):
+for i in range(len_class):
     # # model = torch.hub.load('pytorch/vision:v0.4.2', 'resnext50_32x4d', pretrained=True) # use resnet
     # # num_ftrs = model.fc.in_features
     # # model.fc = nn.Linear(num_ftrs, numb_class1)
@@ -144,24 +150,23 @@ for i in range(6):
 # MODEL3: RD(3)-> LW(1), RD(3)
 # MODEL4: SA(4)-> LW(1), SA(4)
 # MODEL5: SD(5)-> LW(1), SD(5)
-# MODEL6: Stand(6)-> LW(1), SD(6)
+# MODEL6: Stand(6)-> LW(1), SD(6) ## PAPER DOES NOT DO THIS
 
-def train(model, criterion, optimizer, loader, valloader, num_epoch = 20,label_no=None): # Train the model
+def train(model, criterion, optimizer, loader, valloader, num_epoch = 20,label_no=None, event=None): # Train the model
     loss_history=[]
     val_history=[]
     print("Start training...")
     model.train() # Set the model to training mode
-    # model2.train()
 
     for i in range(num_epoch):
         model.train()
         running_loss = []
         for batch, label in tqdm(loader):
-            batch = batch.to(device)
-            label = label.to(device)
+            batch = batch.to(device) 
             label = label -1 # indexing start from 1 (removing sitting conditon)
             if label_no>2:
                 label = label/torch.LongTensor([label_no-1])
+            label = label.to(device)
             optimizer.zero_grad() # Clear gradients from the previous iteration
             pred = model(batch) # This will call Network.forward() that you implement
             loss = criterion(pred, label) # Calculate the loss
@@ -174,6 +179,9 @@ def train(model, criterion, optimizer, loader, valloader, num_epoch = 20,label_n
         _,_,val_acc = evaluate(model, valloader,label_no)
         val_history.append(val_acc)
         print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss),val_acc)) # Print the average loss for this epoch
+    if SAVE_MODEL: 
+        torch.save(model, "model_class{}.pth".format(label_no))
+        print('model saved label:{}'.format(label_no))
     print("Done!")
     return loss_history, val_history
 
@@ -183,11 +191,12 @@ def evaluate(model, loader,label_no): # Evaluate accuracy on validation / test s
     with torch.no_grad(): # Do not calculate grident to speed up computation
         for batch, label in tqdm(loader):
             batch = batch.to(device)
-            label = label.to(device)
+            
             pred = model(batch)
             label = label-1
             if label_no>2:
                 label = label/torch.LongTensor([label_no-1])
+            label = label.to(device)
             # if label_no ==6:
             #     pdb.set_trace()
             correct += (torch.argmax(pred,dim=1)==label).sum().item()
@@ -201,10 +210,11 @@ def evaluate(model, loader,label_no): # Evaluate accuracy on validation / test s
 
 loss_historys=[]
 val_historys=[]
-for i in range(6):
-    loss_history, val_history =train(models[i], criterions[i], optimizers[i], trainloaders[i], valloaders[i], num_epoch, label_no=i+1)
-    loss_historys.append(loss_history)
-    val_historys.append(val_history)
+for i in range(len_class):
+        loss_history, val_history =train(models[i], criterions[i], optimizers[i], trainloaders[i], valloaders[i], num_epoch, label_no=i+1)
+        loss_historys.append(loss_history)
+        val_historys.append(val_history)
+        print('*****class{}*********'.format(i+1))
 
 
 print("Evaluate on test set")
@@ -212,15 +222,16 @@ print("Evaluate on test set")
 
 corrs=[]
 len_datas=[]
-for i in range(6):
-    corr, len_data,_ =evaluate(models[i], testloaders[i],label_no=i+1)
-    corrs.append(corr)
-    len_datas.append(len_data)
+for i in range(len_class):
+        corr, len_data,_ =evaluate(models[i], testloaders[i],label_no=i+1 )
+        corrs.append(corr)
+        len_datas.append(len_data)
 
 
 corr_total =0
 len_data_total=0
-for i in range(6):
+
+for i in range(len_class):
     corr_total = corrs[i] + corr_total
     len_data_total = len_data_total + len_datas[i]
 
