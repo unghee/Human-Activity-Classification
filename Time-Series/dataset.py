@@ -79,7 +79,6 @@ class EnableDataset(Dataset):
 
     def __getitem__(self, index):
         img, label = self.dataset[index]
-
         if self.transform:
             img = F.to_pil_image(np.uint8(img))
             img = self.transform(img)
@@ -87,8 +86,7 @@ class EnableDataset(Dataset):
         return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
 
     def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
-
-        vals=[]
+        vals = []
         for i in range(0,17):
 	        for x in range(3*i,3*(i+1)):
 	            row = segmented_data[:,x]
@@ -97,11 +95,25 @@ class EnableDataset(Dataset):
 	            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
 	            Sxx = Sxx/np.max(Sxx)*255
 	            vals.append(Sxx)
+        out = np.stack(vals, axis=0)
+        out=out.astype(np.uint8)
+        return out
+
+    def cwt(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
+        vals = []
+        for i in range(0,17):
+            for x in range(3*i,3*(i+1)):
+                row = segmented_data[:,x]
+                widths = np.arange(1,101)
+                cwtmatr = signal.cwt(row, signal.ricker, widths)
+                print(cwtmatr.shape, np.min(cwtmatr), np.max(cwtmatr))
+                cwtmatr = cwtmatr-np.min(cwtmatr)
+                cwtmatr = cwtmatr/np.max(cwtmatr)*255
+                vals.append(cwtmatr)
+
 
         out = np.stack(vals, axis=0)
         out=out.astype(np.uint8)
-
-
         return out
 
 
