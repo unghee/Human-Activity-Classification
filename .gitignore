@@ -1,10 +1,10 @@
-
+*.zip
 *.jpg
 *.png
 *.txt
 *.pkl
 old/
-
+*.pth
 
 env/
 *.DS_Store
