@@ -26,7 +26,7 @@ class EnableDataset(Dataset):
     label: when specified, the dataset will only contain data with the given label value
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./../Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, transform=None):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, transform=None):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []

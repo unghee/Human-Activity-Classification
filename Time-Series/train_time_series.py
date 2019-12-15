@@ -38,9 +38,9 @@ print("Loading datasets...")
 
 ## calling for the first time
 
-BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,40),processed=False)
-BIO_val= EnableDataset(subject_list= ['156','185','186','189','190', '191', '192', '193', '194'],data_range=(40,45),processed=False)
-BIO_test= EnableDataset(subject_list= ['156','185','189','190', '192', '193', '194'],data_range=(45,50),processed=False)
+BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,40),time_series=True)
+BIO_val= EnableDataset(subject_list= ['156','185','186','189','190', '191', '192', '193', '194'],data_range=(40,45),time_series=True)
+BIO_test= EnableDataset(subject_list= ['156','185','189','190', '192', '193', '194'],data_range=(45,50),time_series=True)
 
 trainloader = DataLoader(BIO_train, shuffle=False, batch_size=BATCH_SIZE)
 valloader = DataLoader(BIO_val, shuffle=False,batch_size=BATCH_SIZE)
@@ -153,8 +153,8 @@ evaluate(model, valloader)
 print("Evaluate on test set")
 evaluate(model, testloader)
 
-np.savetxt('loss_history_1d.txt',loss_history)
-np.savetxt('val_history_1d.txt',val_history)
+np.savetxt('loss_history.txt',loss_history)
+np.savetxt('val_history.txt',val_history)
 
 
 fig =plt.figure()
@@ -163,7 +163,7 @@ plt.xlabel('iteration')
 plt.ylabel('loss')
 plt.legend()
 plt.show()
-fig.savefig('train_loss_1d.jpg')
+fig.savefig('train_loss.jpg')
 
 fig =plt.figure()
 plt.plot(val_history,label='vaidation accuracy')
@@ -173,8 +173,8 @@ list_idx = [ i for i in range(num_epoch)]
 plt.xticks(np.array(list_idx))
 plt.legend()
 plt.show()
-fig.savefig('val_acc_1d.jpg')
-torch.save(model.state_dict(), '1d_cnn_model.pth')
+fig.savefig('val_acc.jpg')
+torch.save(model.state_dict(), 'time_series_model.pth')
 
 
 
