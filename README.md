@@ -1,5 +1,5 @@
 # Human-Activity-Classification
-For this project, we used Python 3.6
+For this project we used Python 3.6 on Ubuntu Linux 18.04.
 
 ## Setup
 Download the repoistory:
@@ -20,19 +20,21 @@ pip3 install matplotlib # matplotlib
 pip3 install numpy # numpy
 pip3 install pandas # pandas
 pip3 install scipy # scipy
+pip3 install scikit-image # scikit-image
+pip3 install temp # TemporaryFile
 ```
 
 ## Running the project
 Time-Series Method
 ```
-python3 train_time_series.py
+python3 Time-Series/train_time_series.py
 ```
 
 Frequency-Encoding Method
 ```
-python3 train_freq.py
+python3 Freq-Encoding/train_freq.py
 ```
 
 N-way Method
 ```
-python3 train_n_way.py
+python3 N-way/train_n_way.py
