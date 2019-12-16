@@ -29,7 +29,7 @@ WEIGHT_DECAY = 1e-4
 ############################################
 
 # Load data and split into training (80%), test (10%) and validation (10%)
-BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,50), time_series=True, transform=transforms.Compose([transforms.ToTensor(),transforms.Normalize([0.5], [0.5])]))
+BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,50), time_series=True)
 train_size = int(0.8 * len(BIO_train))
 test_size = int((len(BIO_train) - train_size)/2)
 train_dataset, test_dataset, val_dataset = torch.utils.data.random_split(BIO_train, [train_size, test_size, test_size])

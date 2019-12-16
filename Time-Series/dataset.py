@@ -26,7 +26,7 @@ class EnableDataset(Dataset):
     label: when specified, the dataset will only contain data with the given label value
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./../Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, transform=None):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, transform=None):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -81,7 +81,8 @@ class EnableDataset(Dataset):
     def __getitem__(self, index):
         img, label = self.dataset[index]
         if self.transform:
-            img = self.transform(img).squeeze(0)
+            img = F.to_pil_image(np.uint8(img))
+            img = self.transform(img)
             img = np.array(img)
         return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
 
