@@ -26,7 +26,7 @@ class EnableDataset(Dataset):
     label: when specified, the dataset will only contain data with the given label value
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, transform=None):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, event_label = None, transform=None):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -53,7 +53,7 @@ class EnableDataset(Dataset):
                     while not pd.isnull(raw_data.loc[index, event]):
                         trigger = raw_data.loc[index, event+'_Trigger']
                         trigger=str(int(trigger))
-                        if label is None or (float(trigger[0]) == label and float(trigger[2]) != 6 ):
+                        if label is None or (float(trigger[0]) == label and event[0]+event[-7] == event_label and float(trigger[2]) != 6 ):
                             timesteps.append(raw_data.loc[index, event])
                             trigger = raw_data.loc[index, event+'_Trigger']
                             trigger=str(int(trigger))
@@ -70,6 +70,7 @@ class EnableDataset(Dataset):
                             img= self.spectrogram2(data)/128.0-1.0
                             self.dataset.append((img,labels[idx]))
                         else:
+                            data = (data-np.mean(data, axis=0))/np.std(data, axis=0)
                             self.dataset.append((data.T,labels[idx]))
         print("load dataset done")
 
