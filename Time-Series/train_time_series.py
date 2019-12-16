@@ -28,45 +28,37 @@ WEIGHT_DECAY = 1e-4
 
 ############################################
 
-def save_object(obj, filename):
-    with open(filename, 'wb') as output:  # Overwrites any existing file.
-        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
+# Load data and split into training (80%), test (10%) and validation (10%)
+BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(0,50), time_series=True)
+train_size = int(0.8 * len(BIO_train))
+test_size = int((len(BIO_train) - train_size)/2)
+train_dataset, test_dataset, val_dataset = torch.utils.data.random_split(BIO_train, [train_size, test_size, test_size])
 
+trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+classes = [0,0,0,0,0,0,0]
+for data, labels in trainloader:
+    for x in range(labels.size()[0]):
+        classes[labels[x]] +=1
 
-# Load the dataset and train, val, test splits
-print("Loading datasets...")
+valloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
+testloader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
 
-## calling for the first time
-
-BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,40),time_series=True)
-BIO_val= EnableDataset(subject_list= ['156','185','186','189','190', '191', '192', '193', '194'],data_range=(40,45),time_series=True)
-BIO_test= EnableDataset(subject_list= ['156','185','189','190', '192', '193', '194'],data_range=(45,50),time_series=True)
-
-trainloader = DataLoader(BIO_train, shuffle=False, batch_size=BATCH_SIZE)
-valloader = DataLoader(BIO_val, shuffle=False,batch_size=BATCH_SIZE)
-testloader = DataLoader(BIO_test, shuffle=False,batch_size=BATCH_SIZE)
-
-
-## with no sampler
-# trainloader = DataLoader(BIO_train, batch_size=32, shuffle=True)
-# valloader = DataLoader(BIO_val, batch_size=32,shuffle=True)
-# testloader = DataLoader(BIO_test, batch_size=32,shuffle=True)
 
 class Network(nn.Module):
     def __init__(self):
         super().__init__()
         self.sclayer1 = nn.Sequential(
             nn.Conv1d(52, 128, kernel_size=5, stride=1, padding=2),
-            nn.ReLU()
-            # nn.MaxPool1d(kernel_size=2, stride=2))
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2)
         )
         self.sclayer2 = nn.Sequential(
             nn.Conv1d(128, 256, kernel_size=5, stride=1, padding=2),
-            nn.ReLU()
-            # nn.MaxPool1d(kernel_size=2, stride=2),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2)
             )
         self.drop_out = nn.Dropout()
-        self.fc1 = nn.Linear(4*32000, 2000)
+        self.fc1 = nn.Linear(32000, 2000)
         self.fc2 = nn.Linear(2000, numb_class)
 
     def forward(self,x):
@@ -78,24 +70,20 @@ class Network(nn.Module):
         x = self.fc2(x)
         return x
 
-device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
+device = "cuda" if torch.cuda.is_available() else "cpu"
 print('GPU USED?',torch.cuda.is_available())
 
 
 model = Network().to(device)
 model.eval()
-criterion = nn.CrossEntropyLoss() # Specify the loss layer
-optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY) # Specify optimizer and assign trainable parameters to it, weight_decay is L2 regularization strength
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
-
-# TODO: Choose an appropriate number of training epochs
-
-def train(model, loader, num_epoch = 20): # Train the model
+def train(model, loader, num_epoch = 20):
     loss_history=[]
     val_history=[]
     print("Start training...")
-    model.train() # Set the model to training mode
-    # model2.train()
+    model.train()
 
     for i in range(num_epoch):
         running_loss = []
@@ -103,28 +91,26 @@ def train(model, loader, num_epoch = 20): # Train the model
             batch = batch.to(device)
             label = label.to(device)
 
-            label = label -1 # indexing start from 1 (removing sitting conditon)
-            optimizer.zero_grad() # Clear gradients from the previous iteration
-            pred = model(batch) # This will call Network.forward() that you implement
-            loss = criterion(pred, label) # Calculate the loss
+            optimizer.zero_grad()
+            pred = model(batch)
+            loss = criterion(pred, label)
             running_loss.append(loss.item())
-            loss.backward() # Backprop gradients to all tensors in the network
-            optimizer.step() # Update trainable weightspre
+            loss.backward()
+            optimizer.step()
             loss_history.append(np.mean(running_loss))
 
-            # elif label ==2:
         val_acc = evaluate(model, valloader)
         val_history.append(val_acc)
-        print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss),val_acc)) # Print the average loss for this epoch
+        print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss),val_acc))
     print("Done!")
     return loss_history, val_history
 
 def evaluate(model, loader): # Evaluate accuracy on validation / test set
-    model.eval() # Set the model to evaluation mode
+    model.eval()
     correct = 0
     correctnum = [0,0,0,0,0,0,0]
     totalnum = [0,0,0,0,0,0,0]
-    with torch.no_grad(): # Do not calculate grident to speed up computation
+    with torch.no_grad():
         count = 0
         totalloss = 0
         for batch, label in tqdm(loader):
@@ -147,15 +133,19 @@ def evaluate(model, loader): # Evaluate accuracy on validation / test set
         print(correctnum[i]/totalnum[i])
     return acc
 
-loss_history, val_history =train(model, trainloader, num_epoch)
+# Train
+loss_history, val_history = train(model, trainloader, num_epoch)
+
+# Evaluate on validation and test
 print("Evaluate on validation set...")
 evaluate(model, valloader)
 print("Evaluate on test set")
 evaluate(model, testloader)
 
+
+# Save data about model
 np.savetxt('loss_history.txt',loss_history)
 np.savetxt('val_history.txt',val_history)
-
 
 fig =plt.figure()
 plt.plot(loss_history,label='train loss')
