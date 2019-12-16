@@ -4,6 +4,7 @@ from torchvision import transforms, utils
 import cv2
 from scipy import signal, stats
 import matplotlib
+# matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
 
 from tqdm import tqdm # Displays a progress bar
@@ -15,22 +16,11 @@ import os
 import torchvision.transforms.functional as F
 
 
-
 class EnableDataset(Dataset):
-    '''
-    dataDir: path to folder containing data
-    subject_list: the subjects to be included in dataset
-    data_range: the specified circuit trials for each subject
-    window_size: how many samples to consider for a label
-    time_series: when true, use time_series method
-    label: when specified, the dataset will only contain data with the given label value
-    transform: optional transform to apply to the data
-    '''
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, event_label = None, transform=None):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, stride=500, delay=500, processed=False,transform=None):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
-        self.prev_label = np.array([], dtype=np.int64)
         self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
         self.transform = transform
 
@@ -44,6 +34,7 @@ class EnableDataset(Dataset):
 
                 segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
                 labels = np.array([], dtype=np.int64)
+                incom_labels = np.array([], dtype=np.int64)
                 timesteps = []
                 triggers = []
                 index = 0
@@ -51,27 +42,31 @@ class EnableDataset(Dataset):
                 gait_events = ['Right_Heel_Contact','Right_Toe_Off','Left_Heel_Contact','Left_Toe_Off']
                 for event in gait_events:
                     while not pd.isnull(raw_data.loc[index, event]):
+                        timesteps.append(raw_data.loc[index, event])
                         trigger = raw_data.loc[index, event+'_Trigger']
                         trigger=str(int(trigger))
-                        if label is None or (float(trigger[0]) == label and event[0]+event[-7] == event_label and float(trigger[2]) != 6 ):
-                            timesteps.append(raw_data.loc[index, event])
-                            trigger = raw_data.loc[index, event+'_Trigger']
-                            trigger=str(int(trigger))
-                            triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-                            labels = np.append(labels,[float(trigger[2])], axis =0)
-                            self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
+                        triggers.append(trigger) # triggers can be used to compare translational and steady-state error
+                        labels = np.append(labels,[float(trigger[2])], axis =0)
+                        incom_labels = np.append(incom_labels,[float(trigger[0])], axis =0)
+                        # if float(trigger[0]) != float(trigger[2]):
+                        #     print('transitional!!')
+                        if float(trigger[2]) == 0:
+                            print('sitting condition exists!!!!!')
                         index += 1
                     index = 0
 
                 for idx,timestep in enumerate(timesteps):
                     if timestep-window_size-1 >= 0:
                         data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
-                        if not time_series:
-                            img= self.spectrogram2(data)/128.0-1.0
-                            self.dataset.append((img,labels[idx]))
-                        else:
-                            data = (data-np.mean(data, axis=0))/np.std(data, axis=0)
-                            self.dataset.append((data.T,labels[idx]))
+                        # img= self.spectrogram2(data)
+                        # img=np.asarray(img).transpose(2, 1, 0)/128.0-1.0
+                        # img=np.reshape(img,(3,107,16*6))
+
+                        img= self.spectrogram2(data)/128.0-1.0
+
+                        self.dataset.append((img,[labels[idx],incom_labels[idx]]))
+
+                # print(filename, "has been loaded")
         print("load dataset done")
 
 
@@ -80,6 +75,7 @@ class EnableDataset(Dataset):
 
     def __getitem__(self, index):
         img, label = self.dataset[index]
+
         if self.transform:
             img = F.to_pil_image(np.uint8(img))
             img = self.transform(img)
@@ -87,34 +83,42 @@ class EnableDataset(Dataset):
         return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
 
     def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
-        vals = []
-        for i in range(0,17):
-	        for x in range(3*i,3*(i+1)):
-	            row = segmented_data[:,x]
-	            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
-	            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
-	            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
-	            Sxx = Sxx/np.max(Sxx)*255
-	            vals.append(Sxx)
-        out = np.stack(vals, axis=0)
-        out=out.astype(np.uint8)
-        return out
 
-    def cwt(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
-        vals = []
+        vals=[]
+        # for i in range(0,17):
+        # 	vals.append([])
+	       #  for x in range(3*i,3*(i+1)):
+	       #      row = segmented_data[:,x]
+	       #      f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
+	       #      tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
+	       #      Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
+	       #      Sxx = Sxx/np.max(Sxx)*255
+	       #      vals[i].append(Sxx)
+
+        # outs =[]*17
+        # for i in range(0,17):
+        # 	outs.append(np.stack(vals[i], axis=2))
+        # out = np.empty((6,29,3), dtype=float)
+        # for i in range(0,17):
+        # 	out = np.hstack((out,outs[i]))	
+
+        # out = np.flipud(out)
+        # out=out.astype(np.uint8)
+
         for i in range(0,17):
             for x in range(3*i,3*(i+1)):
                 row = segmented_data[:,x]
-                widths = np.arange(1,101)
-                cwtmatr = signal.cwt(row, signal.ricker, widths)
-                print(cwtmatr.shape, np.min(cwtmatr), np.max(cwtmatr))
-                cwtmatr = cwtmatr-np.min(cwtmatr)
-                cwtmatr = cwtmatr/np.max(cwtmatr)*255
-                vals.append(cwtmatr)
+                f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
+                tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
+                Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
+                Sxx = Sxx/np.max(Sxx)*255
+                vals.append(Sxx)
 
 
         out = np.stack(vals, axis=0)
         out=out.astype(np.uint8)
+
+
         return out
 
 
@@ -157,4 +161,5 @@ class EnableDataset(Dataset):
         out = np.hstack((out1, out2))
         cv2.imshow("ret", out)
         cv2.waitKey(0)
+     # print(ret.shape)
         return ret
