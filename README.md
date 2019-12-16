@@ -1,7 +1,9 @@
 # Human-Activity-Classification
 For this project we used Python 3.6 on Ubuntu Linux 18.04.
+The dataset was taken from: https://figshare.com/articles/Benchmark_datasets_for_bilateral_lower_limb_neuromechanical_signals_from_wearable_sensors_during_unassisted_locomotion_in_able-bodied_individuals/5362627
 
 ## Setup
+
 Download the repoistory:
 
 ```
