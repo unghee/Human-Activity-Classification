@@ -80,8 +80,7 @@ class EnableDataset(Dataset):
     def __getitem__(self, index):
         img, label = self.dataset[index]
         if self.transform:
-            img = F.to_pil_image(np.uint8(img))
-            img = self.transform(img)
+            img = self.transform(img).squeeze(0)
             img = np.array(img)
         return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
 
