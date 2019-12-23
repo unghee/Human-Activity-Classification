@@ -90,7 +90,7 @@ class EnableDataset(Dataset):
         vals = []
         for i in range(0,17):
 	        for x in range(3*i,3*(i+1)):
-	            row = segmented_data[:,x]
+	            row = segmented_data[:,x] # how about changing to log scale?
 	            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
 	            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
 	            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)

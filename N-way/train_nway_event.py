@@ -27,7 +27,7 @@ len_class = len(numb_class)
 
 # numb_class = 6
 SAVE_MODEL = False
-num_epoch = 1
+num_epoch = 5
 
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4*0.8
@@ -47,11 +47,17 @@ print("Loading datasets...")
 BIO_trains=[]
 BIO_tests=[]
 events = ['RC','RT','LT','LC']
-for i in range(len_class):
-    for event in events:
-        BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,46),window_size=500,label=i+1,event_label=event))
-        BIO_tests.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(46,50),window_size=500,label=i+1,event_label=event))
-        print("label_{}_event_{} loaded".format(i,event))
+# for i in range(len_class):
+#     for event in events:
+#         BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,46),window_size=500,label=i+1,event_label=event))
+#         BIO_tests.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(46,50),window_size=500,label=i+1,event_label=event))
+#         print("label_{}_event_{} loaded".format(i,event))
+
+with open('BIO_trains_events_20way.pkl', 'rb') as input:
+    BIO_trains = pickle.load(input)
+with open('BIO_tests_events_20way.pkl', 'rb') as input:
+    BIO_tests = pickle.load(input)
+
 
 
 ## check the class distribution
@@ -62,7 +68,7 @@ def weight_classes(dataset):
     for data, labels in trainloader:
         for x in range(labels.size()[0]):
             classes[labels[x]] +=1
-    print(classes)
+    # print(classes)
 
     classes= classes[1:-1]
 
@@ -71,20 +77,24 @@ def weight_classes(dataset):
     weights=[]
     sum_classes = np.sum(classes)
     for idx in classes:
-        # if idx != 0 :
-        weights.append(sum_classes/idx)
-        # else:
-            # continue
+        if idx != 0 :
+            weights.append(sum_classes/idx)
+        else:
+            continue
 
-
+    print(weights)
     weights = torch.FloatTensor(weights)
+
 
 
     return weights
 
 weights_list=[]
-for i in range(len_class*len(events)):
-    weights_list.append(weight_classes(BIO_trains[i]))
+j = 0
+for i in range(len_class):
+    for event in events:
+        weights_list.append(weight_classes(BIO_trains[j]))
+        j+=1
 
 validation_split = .2
 shuffle_dataset = True
@@ -94,22 +104,25 @@ random_seed= 42
 train_samplers=[]
 valid_samplers=[]
 val_lens=[]
-for i in range(len_class*len(events)):
-    dataset_size = len(BIO_trains[i])
-    indices = list(range(dataset_size))
-    split = int(np.floor(validation_split * dataset_size))
-    if shuffle_dataset :
-        np.random.seed(random_seed)
-        np.random.shuffle(indices)
-    train_indices, val_indices = indices[split:], indices[:split]
-    val_len=len(val_indices)
-    val_lens.append(val_len)
+j = 0
+for i in range(len_class):
+    for event in events:
+        dataset_size = len(BIO_trains[j])
+        indices = list(range(dataset_size))
+        split = int(np.floor(validation_split * dataset_size))
+        if shuffle_dataset :
+            np.random.seed(random_seed)
+            np.random.shuffle(indices)
+        train_indices, val_indices = indices[split:], indices[:split]
+        val_len=len(val_indices)
+        val_lens.append(val_len)
 
-    # Creating PT data samplers and loaders:
-    train_sampler = SubsetRandomSampler(train_indices)
-    valid_sampler = SubsetRandomSampler(val_indices)
-    train_samplers.append(train_sampler)
-    valid_samplers.append(valid_sampler)
+        # Creating PT data samplers and loaders:
+        train_sampler = SubsetRandomSampler(train_indices)
+        valid_sampler = SubsetRandomSampler(val_indices)
+        train_samplers.append(train_sampler)
+        valid_samplers.append(valid_sampler)
+        j +=1
 
 
 
@@ -117,10 +130,13 @@ for i in range(len_class*len(events)):
 trainloaders=[]
 valloaders=[]
 testloaders=[]
-for i in range(len_class*len(events)):
-        trainloaders.append(DataLoader(BIO_trains[i], shuffle=False,batch_size=BATCH_SIZE,sampler = train_samplers[i]))
-        valloaders.append(DataLoader(BIO_trains[i], shuffle=False,batch_size=BATCH_SIZE,sampler = valid_samplers[i]))
-        testloaders.append(DataLoader(BIO_tests[i], shuffle=False,batch_size=BATCH_SIZE))
+j = 0
+for i in range(len_class):
+    for event in events:
+        trainloaders.append(DataLoader(BIO_trains[j], shuffle=False,batch_size=BATCH_SIZE,sampler = train_samplers[j]))
+        valloaders.append(DataLoader(BIO_trains[j], shuffle=False,batch_size=BATCH_SIZE,sampler = valid_samplers[j]))
+        testloaders.append(DataLoader(BIO_tests[j], shuffle=False,batch_size=BATCH_SIZE))
+        j +=1
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
@@ -131,16 +147,18 @@ print('GPU USED?',torch.cuda.is_available())
 models =[]
 optimizers =[]
 criterions =[]
-
-for i in range(len_class*len(events)):
-            model = Network(output_dim=numb_class[i//len(events)])
+j = 0
+for i in range(len_class):
+    for event in events:
+            model = Network(output_dim=numb_class[i])
             model = model.to(device)
             model.eval()
             models.append(model)
-            weights_list[i] = weights_list[i].to(device)
-            criterions.append(nn.CrossEntropyLoss(weight=weights_list[i]))
+            weights_list[j] = weights_list[j].to(device)
+            criterions.append(nn.CrossEntropyLoss(weight=weights_list[j]))
             optimizers.append(optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY))
             del model
+            j +=1
 
 
 #### MODE-SPECIFIC CLASSIFIER SCHEME
@@ -213,7 +231,7 @@ val_historys=[]
 j = 0
 for i in range(len_class):
     for event in events:
-        loss_history, val_history =train(models[i], criterions[i], optimizers[i], trainloaders[j], valloaders[j], num_epoch, label_no=i+1,event=event,vallen=val_lens[j])
+        loss_history, val_history =train(models[j], criterions[j], optimizers[j], trainloaders[j], valloaders[j], num_epoch, label_no=i+1,event=event,vallen=val_lens[j])
         loss_historys.append(loss_history)
         val_historys.append(val_history)
         print('*****class{}_{}*********'.format(i+1,event))
@@ -228,7 +246,7 @@ len_datas=[]
 j =0
 for i in range(len_class):
     for event in events:
-        corr, len_data,_ =evaluate(models[i], testloaders[j],label_no=i+1 )
+        corr, len_data,_ =evaluate(models[j], testloaders[j],label_no=i+1 )
         corrs.append(corr)
         len_datas.append(len_data)
         print('Evlauation on class{}_{}*********'.format(i+1,event))
@@ -237,10 +255,12 @@ for i in range(len_class):
 
 corr_total =0
 len_data_total=0
-for i in range(len_class*len(events)):
+j =0 
+for i in range(len_class):
     for event in events:
-        corr_total = corrs[i] + corr_total
-        len_data_total = len_data_total + len_datas[i]
+        corr_total = corrs[j] + corr_total
+        len_data_total = len_data_total + len_datas[j]
+        j +=1
 
 
 acc_total = corr_total/len_data_total
