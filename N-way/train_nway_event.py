@@ -27,7 +27,7 @@ len_class = len(numb_class)
 
 # numb_class = 6
 SAVE_MODEL = False
-num_epoch = 5
+num_epoch = 6
 
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4*0.8
@@ -286,6 +286,5 @@ plt.xticks(np.array(list_idx))
 plt.legend()
 plt.show()
 fig.savefig('val_acc.jpg')
-
 
 
