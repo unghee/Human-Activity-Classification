@@ -7,7 +7,7 @@ old/
 *.pth
 
 env/
-*.DS_Store
+.DS_Store
 Data/*
 *.jpg
 __pycache__/
