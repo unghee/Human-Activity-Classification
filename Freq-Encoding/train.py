@@ -11,6 +11,8 @@ from torch.utils.data import Dataset, Subset, DataLoader, random_split
 
 from dataset import EnableDataset
 
+import pickle
+
 class Network(nn.Module):
     def __init__(self):
         super().__init__()
@@ -24,7 +26,8 @@ class Network(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),
             )
         self.drop_out = nn.Dropout()
-        self.fc1 = nn.Linear( 4096, 2000)
+        # self.fc1 = nn.Linear( 4096, 2000)
+        self.fc1 = nn.Linear( 8192, 2000)
         self.fc2 = nn.Linear(2000, 7)
 
 
@@ -41,7 +44,16 @@ class Network(nn.Module):
 print("Loading datasets...")
 
 
+def save_object(obj, filename):
+    with open(filename, 'wb') as output:  # Overwrites any existing file.
+        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
+
+
 BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50))
+# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 5))
+
+save_object(BIO_train,'BIO_train_melspectro.pkl')
+
 
 train_size = int(0.8 * len(BIO_train))
 test_size = int((len(BIO_train) - train_size)/2)
