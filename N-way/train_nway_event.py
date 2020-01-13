@@ -27,7 +27,7 @@ len_class = len(numb_class)
 
 # numb_class = 6
 SAVE_MODEL = False
-num_epoch = 6
+num_epoch = 60
 
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4*0.8
@@ -47,16 +47,25 @@ print("Loading datasets...")
 BIO_trains=[]
 BIO_tests=[]
 events = ['RC','RT','LT','LC']
+for i in range(len_class):
+    for event in events:
+        BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,46),window_size=500,label=i+1,event_label=event))
+        BIO_tests.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(46,50),window_size=500,label=i+1,event_label=event))
+        print("label_{}_event_{} loaded".format(i,event))
+
 # for i in range(len_class):
 #     for event in events:
-#         BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,46),window_size=500,label=i+1,event_label=event))
-#         BIO_tests.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(46,50),window_size=500,label=i+1,event_label=event))
+#         BIO_trains.append(EnableDataset(subject_list= ['156'],data_range=(1,4),window_size=500,label=i+1,event_label=event))
+#         BIO_tests.append(EnableDataset(subject_list= ['156'],data_range=(46,50),window_size=500,label=i+1,event_label=event))
 #         print("label_{}_event_{} loaded".format(i,event))
 
-with open('BIO_trains_events_20way.pkl', 'rb') as input:
-    BIO_trains = pickle.load(input)
-with open('BIO_tests_events_20way.pkl', 'rb') as input:
-    BIO_tests = pickle.load(input)
+save_object(BIO_trains,'BIO_trains.pkl')
+save_object(BIO_tests,'BIO_tests.pkl')
+
+# with open('BIO_trains_events_20way.pkl', 'rb') as input:
+#     BIO_trains = pickle.load(input)
+# with open('BIO_tests_events_20way.pkl', 'rb') as input:
+#     BIO_tests = pickle.load(input)
 
 
 
