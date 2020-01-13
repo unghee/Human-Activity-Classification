@@ -30,7 +30,7 @@ class EnableDataset(Dataset):
     label: when specified, the dataset will only contain data with the given label value
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=512, time_series=False, label=None, transform=None):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, transform=None):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -57,12 +57,15 @@ class EnableDataset(Dataset):
                     while not pd.isnull(raw_data.loc[index, event]):
                         trigger = raw_data.loc[index, event+'_Trigger']
                         trigger=str(int(trigger))
-                        if label is None or (float(trigger[0]) == label and float(trigger[2]) != 6 ):
+                        # if label is None or float(trigger[0]) == label or float(trigger[2]) != 6  and float(trigger[0]) !=6:
+                        if float(trigger[2]) != 6 and float(trigger[0]) !=6:
                             timesteps.append(raw_data.loc[index, event])
                             trigger = raw_data.loc[index, event+'_Trigger']
                             trigger=str(int(trigger))
                             triggers.append(trigger) # triggers can be used to compare translational and steady-state error
                             labels = np.append(labels,[float(trigger[2])], axis =0)
+                            if float(trigger[2]) == 6:
+                                print('***********',trigger[2])
                             self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
                         index += 1
                     index = 0
@@ -105,7 +108,7 @@ class EnableDataset(Dataset):
 	            vals.append(Sxx)
         # the way of stacking should be fixed
         out = np.stack(vals, axis=0)
-        out=out.astype(np.uint8)
+        # out=out.astype(np.uint8)
         return out
 
     def melspectrogram(self, segmented_data, fs=500,bands=64, frames=64,hop_length=50):
@@ -113,12 +116,13 @@ class EnableDataset(Dataset):
         ###### STACKING UP MULTIPLE SPECTOGRAM APPROACH! 
 
         vals = []
+        # vals2 =[]
         for i in range(0,17):
             for x in range(3*i,3*(i+1)):
                 row = segmented_data[:,x]
                 melspec_full = librosa.feature.melspectrogram(y=row,sr=fs,n_fft=hop_length*2, hop_length=hop_length,n_mels=bands) 
                 logspec_full = librosa.amplitude_to_db(melspec_full) 
-                # logspec_full = logspec_full.T.flatten()[:,np.newaxis].T 
+                logspec_delta = librosa.feature.delta(logspec_full) # add derivative
                 # librosa.display.specshow(logspec_full, x_axis='time',y_axis='mel', sr=fs,fmax=fs/2)
                 # plt.colorbar(format='%+02.0f dB') 
                 # plt.imshow(logspec_full)
@@ -126,12 +130,15 @@ class EnableDataset(Dataset):
                 # plt.close()
   
                 vals.append(logspec_full)
-        out = np.stack(vals, axis=0)
-        out = out.astype(np.uint8)
+                # vals2.append(logspec_delta)
+        # out = np.stack(vals, axis=0)
+        # out = out.astype(np.uint8)
+
+        # features = np.concatenate((vals,vals2),axis=2)
 
         # out = np.asarray(out).reshape(len(out),bands,frames, 1) 
 
-        return out
+        return vals
 
 
     def cwt(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):

@@ -13,6 +13,19 @@ from dataset import EnableDataset
 
 import pickle
 
+
+
+
+########## SETTINGS  ########################
+
+BATCH_SIZE = 32
+LEARNING_RATE = 1e-5
+WEIGHT_DECAY = 1e-3
+NUMB_CLASS = 5
+
+############################################
+
+
 class Network(nn.Module):
     def __init__(self):
         super().__init__()
@@ -28,7 +41,8 @@ class Network(nn.Module):
         self.drop_out = nn.Dropout()
         # self.fc1 = nn.Linear( 4096, 2000)
         self.fc1 = nn.Linear( 8192, 2000)
-        self.fc2 = nn.Linear(2000, 7)
+        # self.fc1 = nn.Linear( 20480, 2000)
+        self.fc2 = nn.Linear(2000, NUMB_CLASS)
 
 
     def forward(self,x):
@@ -48,38 +62,70 @@ def save_object(obj, filename):
     with open(filename, 'wb') as output:  # Overwrites any existing file.
         pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
 
+def weight_classes(dataset):
+    trainloader = DataLoader(dataset, shuffle=False,batch_size=BATCH_SIZE)
+    classes = [0,0,0,0,0,0,0]
+    for data, labels in trainloader:
+        for x in range(labels.size()[0]):
+            classes[labels[x]] +=1
+    print(classes)
 
-BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50))
+    classes= classes[1:-1]
+
+
+    ## with sample
+    weights=[]
+    sum_classes = np.sum(classes)
+    for idx in classes:
+        if idx != 0 :
+            weights.append(sum_classes/idx)
+        else:
+            continue
+
+    print(weights)
+    weights = torch.FloatTensor(weights)
+
+
+    return weights
+
+
+# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50))
 # BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 5))
 
-save_object(BIO_train,'BIO_train_melspectro.pkl')
+# save_object(BIO_train,'BIO_train_melspectro_5label.pkl')
+
+with open('BIO_train_melspectro_5label.pkl', 'rb') as input:
+    BIO_train = pickle.load(input)
 
 
-train_size = int(0.8 * len(BIO_train))
+train_size = int(0.8 * len(BIO_train))+1
 test_size = int((len(BIO_train) - train_size)/2)
 train_dataset, test_dataset, val_dataset = torch.utils.data.random_split(BIO_train, [train_size, test_size, test_size])
 # Create dataloaders
-trainloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-classes = [0,0,0,0,0,0,0]
-for data, labels in trainloader:
-    for x in range(labels.size()[0]):
-        classes[labels[x]] +=1
-print(classes)
-valloader = DataLoader(test_dataset, batch_size=32)
-testloader = DataLoader(val_dataset, batch_size=32)
+trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+# classes = [0,0,0,0,0,0,0]
+# for data, labels in trainloader:
+#     for x in range(labels.size()[0]):
+#         classes[labels[x]] +=1
+# print(classes)
+valloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
+testloader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
 
-numb_class = 7
+
+# numb_class = 5
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 print('GPU USED?',torch.cuda.is_available())
 model = Network()
-
 model = model.to(device)
-weights = torch.FloatTensor([0.0, 1.0, 9693/2609, 9693/3250, 9693/1181, 9693/1133, 9693/530 ])
+
+weights = weight_classes(BIO_train)
+
+# weights = torch.FloatTensor([0.0, 1.0, 9693/2609, 9693/3250, 9693/1181, 9693/1133, 9693/530 ])
 weights = weights.to(device)
 criterion = nn.CrossEntropyLoss(weight=weights)
-optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-3)
+optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 num_epoch = 60
 
 def train(model, loader, num_epoch = 20): # Train the model
@@ -92,6 +138,7 @@ def train(model, loader, num_epoch = 20): # Train the model
         for batch, label in tqdm(loader):
             batch = batch.to(device)
             label = label.to(device)
+            label = label -1 # indexing start from 1 (removing sitting conditon)
             optimizer.zero_grad()
             pred = model(batch)
             loss = criterion(pred, label)
@@ -108,13 +155,14 @@ def train(model, loader, num_epoch = 20): # Train the model
 def evaluate(model, loader):
     model.eval()
     correct = 0
-    labels = [0,0,0,0,0,0,0]
-    totalcount = [0,0,0,0,0,0,0]
+    # labels = [0,0,0,0,0,0,0]
+    # totalcount = [0,0,0,0,0,0,0]
     with torch.no_grad():
         count = 0
         totalloss = 0
         for batch, label in tqdm(loader):
             batch = batch.to(device)
+            label = label-1 # indexing start from 1 (removing sitting conditon)
             label = label.to(device)
             pred = model(batch)
             totalloss += criterion(pred, label)
