@@ -22,7 +22,7 @@ BATCH_SIZE = 32
 LEARNING_RATE = 1e-5
 WEIGHT_DECAY = 1e-3
 NUMB_CLASS = 5
-
+NUB_EPOCH=60
 ############################################
 
 
@@ -39,8 +39,8 @@ class Network(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),
             )
         self.drop_out = nn.Dropout()
-        # self.fc1 = nn.Linear( 4096, 2000)
-        self.fc1 = nn.Linear( 8192, 2000)
+        self.fc1 = nn.Linear( 4096, 2000)
+        # self.fc1 = nn.Linear( 8192, 2000)
         # self.fc1 = nn.Linear( 20480, 2000)
         self.fc2 = nn.Linear(2000, NUMB_CLASS)
 
@@ -89,13 +89,13 @@ def weight_classes(dataset):
     return weights
 
 
-# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50))
-# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 5))
+BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
+# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 5),bands=16,hop_length=27)
 
-# save_object(BIO_train,'BIO_train_melspectro_5label.pkl')
+save_object(BIO_train,'BIO_train_melspectro_reduced.pkl')
 
-with open('BIO_train_melspectro_5label.pkl', 'rb') as input:
-    BIO_train = pickle.load(input)
+# with open('BIO_train_melspectro_5label.pkl', 'rb') as input:
+    # BIO_train = pickle.load(input)
 
 
 train_size = int(0.8 * len(BIO_train))+1
@@ -126,7 +126,7 @@ weights = weight_classes(BIO_train)
 weights = weights.to(device)
 criterion = nn.CrossEntropyLoss(weight=weights)
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-num_epoch = 60
+num_epoch = NUB_EPOCH
 
 def train(model, loader, num_epoch = 20): # Train the model
     loss_history=[]

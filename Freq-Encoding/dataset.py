@@ -30,7 +30,7 @@ class EnableDataset(Dataset):
     label: when specified, the dataset will only contain data with the given label value
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, transform=None):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, transform=None,bands=None,hop_length=None):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -75,7 +75,7 @@ class EnableDataset(Dataset):
                         data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
                         if not time_series:
                             # img= self.spectrogram2(data)/128.0-1.0
-                            img= self.melspectrogram(data)
+                            img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)
                             # plt.imshow(img)
                             # plt.show()
 
@@ -111,7 +111,7 @@ class EnableDataset(Dataset):
         # out=out.astype(np.uint8)
         return out
 
-    def melspectrogram(self, segmented_data, fs=500,bands=64, frames=64,hop_length=50):
+    def melspectrogram(self, segmented_data, fs=500,bands=64 ,hop_length=50):
 
         ###### STACKING UP MULTIPLE SPECTOGRAM APPROACH! 
 
