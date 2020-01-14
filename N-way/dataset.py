@@ -100,23 +100,34 @@ class EnableDataset(Dataset):
                 Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
                 Sxx = Sxx/np.max(Sxx)*255
                 vals.append(Sxx)
+                # plt.imshow(Sxx)
+                # plt.show()
         out = np.stack(vals, axis=0)
-        out=out.astype(np.uint8)
+
+        # out=out.astype(np.uint8)
         return out
 
-    def melspectrogram(self, segmented_data, fs=500,bands=64, frames=64,hop_length=50):
+    def melspectrogram(self, segmented_data, fs=500,bands=16, frames=16,hop_length=27):
 
         ###### STACKING UP MULTIPLE SPECTOGRAM APPROACH! 
 
         vals = []
         # vals2 =[]
+        # n_mels height of the image
+        # time_steps : number of time-steps. width of the image
+        # len(y) = time_steps*hop_length 
+        # time_steps = len(y)/hop_length
+
         for i in range(0,17):
             for x in range(3*i,3*(i+1)):
                 row = segmented_data[:,x]
                 melspec_full = librosa.feature.melspectrogram(y=row,sr=fs,n_fft=hop_length*2, hop_length=hop_length,n_mels=bands) 
                 logspec_full = librosa.amplitude_to_db(melspec_full) 
-                logspec_delta = librosa.feature.delta(logspec_full) # add derivative
-
+                # logspec_delta = librosa.feature.delta(logspec_full) # add derivative
+                # librosa.display.specshow(logspec_full, x_axis='time',y_axis='mel', sr=fs,fmax=fs/2)
+                # plt.colorbar(format='%+02.0f dB') 
+                # plt.imshow(logspec_full)
+                # plt.show()
   
                 vals.append(logspec_full)
 

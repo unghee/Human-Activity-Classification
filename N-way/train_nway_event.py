@@ -47,11 +47,11 @@ print("Loading datasets...")
 BIO_trains=[]
 BIO_tests=[]
 events = ['RC','RT','LT','LC']
-for i in range(len_class):
-    for event in events:
-        BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,46),window_size=500,label=i+1,event_label=event))
-        BIO_tests.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(46,50),window_size=500,label=i+1,event_label=event))
-        print("label_{}_event_{} loaded".format(i,event))
+# for i in range(len_class):
+#     for event in events:
+#         BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1,46),window_size=500,label=i+1,event_label=event))
+#         BIO_tests.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(46,50),window_size=500,label=i+1,event_label=event))
+#         print("label_{}_event_{} loaded".format(i,event))
 
 # for i in range(len_class):
 #     for event in events:
@@ -59,13 +59,13 @@ for i in range(len_class):
 #         BIO_tests.append(EnableDataset(subject_list= ['156'],data_range=(46,50),window_size=500,label=i+1,event_label=event))
 #         print("label_{}_event_{} loaded".format(i,event))
 
-save_object(BIO_trains,'BIO_trains.pkl')
-save_object(BIO_tests,'BIO_tests.pkl')
+# save_object(BIO_trains,'BIO_trains_reduced_size.pkl')
+# save_object(BIO_tests,'BIO_tests_reduced_size.pkl')
 
-# with open('BIO_trains_events_20way.pkl', 'rb') as input:
-#     BIO_trains = pickle.load(input)
-# with open('BIO_tests_events_20way.pkl', 'rb') as input:
-#     BIO_tests = pickle.load(input)
+with open('BIO_trains_reduced_size.pkl', 'rb') as input:
+    BIO_trains = pickle.load(input)
+with open('BIO_tests_reduced_size.pkl', 'rb') as input:
+    BIO_tests = pickle.load(input)
 
 
 
@@ -201,10 +201,11 @@ def train(model, criterion, optimizer, loader, valloader, num_epoch = 20,label_n
             loss.backward()
             optimizer.step()
             loss_history.append(np.mean(running_loss))
-
         _,_,val_acc = evaluate(model, valloader,label_no,vallen)
         val_history.append(val_acc)
         print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss),val_acc)) # Print the average loss for this epoch
+
+
     if SAVE_MODEL:
         torch.save(model, "model_class{}_{}.pth".format(label_no,event))
         print('model saved label:{} event:{}'.format(label_no,event))
@@ -237,9 +238,12 @@ def evaluate(model, loader,label_no,vallen=None): # Evaluate accuracy on validat
 
 loss_historys=[]
 val_historys=[]
+# j = 15
 j = 0
 for i in range(len_class):
     for event in events:
+
+        # print(event)
         loss_history, val_history =train(models[j], criterions[j], optimizers[j], trainloaders[j], valloaders[j], num_epoch, label_no=i+1,event=event,vallen=val_lens[j])
         loss_historys.append(loss_history)
         val_historys.append(val_history)

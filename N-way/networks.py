@@ -33,8 +33,8 @@ class Network(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),
             )
         self.drop_out = nn.Dropout()
-        # self.fc1 = nn.Linear( 4096, 2000)
-        self.fc1 = nn.Linear( 8192, 2000)
+        self.fc1 = nn.Linear( 4096, 2000)
+        # self.fc1 = nn.Linear( 8192, 2000)
         # self.fc1 = nn.Linear( 2048, 2000) # 300
         self.fc2 = nn.Linear(2000, self.output_numb)
 
