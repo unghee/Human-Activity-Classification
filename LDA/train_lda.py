@@ -12,36 +12,29 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, StratifiedKFold
 
 
+## for N way classifieres
+
+
 # BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
 BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'])
 
-# train_size = int(0.8 * len(BIO_train))
-# test_size = int((len(BIO_train) - train_size)/2)
-# train_dataset, test_dataset, val_dataset = torch.utils.data.random_split(BIO_train, [train_size, test_size, test_size])
-
-
-# trainloader = DataLoader(train_dataset, batch_size=len(train_dataset))
-# valloader = DataLoader(test_dataset, batch_size=len(val_dataset))
-# testloader = DataLoader(val_dataset, batch_size=len(test_dataset))
 
 wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
-# print('train size',len(train_dataset))
-# print('val size',len(val_dataset))
-# print('test size',len(test_dataset))
-# device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
-# print('GPU USED?',torch.cuda.is_available())
 
-# run lda without mode specific
-# run lda with mode specific
+
+
+correct=0
 
 model = LinearDiscriminantAnalysis()
+
+
+
 
 # Define cross-validation parameters
 numfolds = 10
 # kf = KFold(n_splits = numfolds, shuffle = True)
 skf = StratifiedKFold(n_splits = numfolds, shuffle = True)
-
 
 
 for batch, label in tqdm(wholeloader):
@@ -56,11 +49,15 @@ for train_index, test_index in skf.split(X, y):
 
 	model.fit(X_train, y_train)
 	y_pred = model.predict(X_test)
-	accuracy_cur=accuracy_score(y_test, y_pred)
-	accuracies.append(accuracy_cur)
-	print('Accuracy' + str(accuracy_cur))
+	correct += (y_pred==np.array(y_test)).sum().item()
+		# accuracy_cur=accuracy_score(y_test, y_pred)
+		# accuracies.append(accuracy_cur)
+	# print('Accuracy' + str(accuracy_cur))
 
-print('Accuracy_total:', np.mean(accuracies))
+# print('Accuracy_total:', np.mean(accuracies))
+
+print('Accuracy_total:', correct/len(BIO_train))
+
 # for batch, label in tqdm(trainloader):
 # 	model.fit(batch, label)
 

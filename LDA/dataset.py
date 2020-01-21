@@ -18,7 +18,7 @@ import torchvision.transforms.functional as F
 import librosa
 
 import librosa.display
-
+import pdb
 
 class EnableDataset(Dataset):
     '''
@@ -30,7 +30,7 @@ class EnableDataset(Dataset):
     label: when specified, the dataset will only contain data with the given label value
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'],time_series=False, label=None, delay=0):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], prevlabel=None, delay=0):
 
         # print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -54,20 +54,34 @@ class EnableDataset(Dataset):
                 for index in range(0,raw_data.shape[0]):
                     trigger = raw_data.loc[index,'Trigger']
                     trigger=str(int(trigger))
-
-                    if float(trigger[2]) != 6 and float(trigger[0]) !=6:
-                        # trigger = raw_data.loc[index,'_Trigger']
-                        # trigger=str(int(trigger))
-                        triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-                        # labels = np.append(labels,[float(trigger[2])], axis =0)
-                        label = float(trigger[2])
-                        if float(trigger[2]) == 6:
-                            print('***********',trigger[2])
-                        self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
-
-                        data = np.array(raw_data.loc[index, :'Contra RF AR6'])
-                        self.dataset.append((data.T,label))
-
+                    if prevlabel is not None:
+                    	if float(trigger[0]) == prevlabel and float(trigger[2]) != 6 and float(trigger[0]) !=6:
+	                        # trigger = raw_data.loc[index,'_Trigger']
+	                        # trigger=str(int(trigger))
+	                        triggers.append(trigger) # triggers can be used to compare translational and steady-state error
+	                        # labels = np.append(labels,[float(trigger[2])], axis =0)
+	                        label = float(trigger[2])
+	                        if float(trigger[2]) == 6:
+	                            print('***********',trigger[2])
+	                        # self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
+	                        # if float(trigger[2]) == 5:
+	                        # 	pdb.set_trace()
+	                        data = np.array(raw_data.loc[index, :'Contra RF AR6'])
+	                        self.dataset.append((data.T,label))
+                    else:
+                    	if float(trigger[2]) != 6 and float(trigger[0]) !=6:
+	                        # trigger = raw_data.loc[index,'_Trigger']
+	                        # trigger=str(int(trigger))
+	                        triggers.append(trigger) # triggers can be used to compare translational and steady-state error
+	                        # labels = np.append(labels,[float(trigger[2])], axis =0)
+	                        label = float(trigger[2])
+	                        if float(trigger[2]) == 6:
+	                            print('***********',trigger[2])
+	                        # self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
+	                        # if float(trigger[2]) == 5:
+	                        # 	pdb.set_trace()
+	                        data = np.array(raw_data.loc[index, :'Contra RF AR6'])
+	                        self.dataset.append((data.T,label))	                	
                     # index += 1
                 # index =0
 
