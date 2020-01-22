@@ -10,7 +10,9 @@ from dataset import EnableDataset
 
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, StratifiedKFold
-
+from sklearn import preprocessing
+from sklearn.decomposition import PCA, sparse_encode
+from sklearn.pipeline import Pipeline
 
 ## for N way classifieres
 
@@ -26,45 +28,65 @@ wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
 correct=0
 
-model = LinearDiscriminantAnalysis()
+
 
 
 
 
 # Define cross-validation parameters
 numfolds = 10
-# kf = KFold(n_splits = numfolds, shuffle = True)
-skf = StratifiedKFold(n_splits = numfolds, shuffle = True)
+skf = KFold(n_splits = numfolds, shuffle = True)
+# skf = StratifiedKFold(n_splits = numfolds, shuffle = True)
 
 
 for batch, label in tqdm(wholeloader):
 	X = batch
 	y = label 
+
+model = LinearDiscriminantAnalysis()
+
+
+
+
+# pca_object = pca.fit(X)
+# X_pca = pca_object.transform(X)
+
+# scale = preprocessing.StandardScaler()
+# pca = PCA()
+# scale_PCA = Pipeline([('norm',scale),('dimred',pca)])
+
+
+
 accuracies =[]
 for train_index, test_index in skf.split(X, y):
-	# print("TRAIN:", len(train_index), "TEST:", len(test_index), 'percentage', len(test_index)/len(train_index))
 
 	X_train, X_test = X[train_index], X[test_index]
 	y_train, y_test = y[train_index], y[test_index]
 
+
+	## Dimension reduction
+	# scale.fit(X_train)
+	# scale_PCA.fit(X_train)
+
+	# feats_train_PCA = scale_PCA.transform(X_train)
+	# feats_test_PCA = scale_PCA.transform(X_test)   
+
+	# pcaexplainedvar = np.cumsum(scale_PCA.named_steps['dimred'].explained_variance_ratio_)                
+	# pcanumcomps = min(min(np.where(pcaexplainedvar > 0.95))) + 1
+
+	# unique_modes = np.unique(y_train)
+	# model.set_params(priors = np.ones(len(unique_modes))/len(unique_modes))
+
+	# pcaldafit = model.fit(feats_train_PCA[:,0:pcanumcomps],y_train)
+	# y_pred=pcaldafit.predict(feats_test_PCA[:,0:pcanumcomps]).ravel()
+	# correct += (y_pred==np.array(y_test)).sum().item()
+
 	model.fit(X_train, y_train)
 	y_pred = model.predict(X_test)
 	correct += (y_pred==np.array(y_test)).sum().item()
-		# accuracy_cur=accuracy_score(y_test, y_pred)
-		# accuracies.append(accuracy_cur)
-	# print('Accuracy' + str(accuracy_cur))
+	accuracies.append(accuracy_score(y_test, y_pred))
+	print(accuracy_score(y_test, y_pred))
 
-# print('Accuracy_total:', np.mean(accuracies))
 
 print('Accuracy_total:', correct/len(BIO_train))
-
-# for batch, label in tqdm(trainloader):
-# 	model.fit(batch, label)
-
-# for batch, label in tqdm(valloader):
-# 	model.score(batch,label)
-# 	y_pred = model.predict(batch)
-# 	y_test=label
-
-
-# print('Accuracy' + str(accuracy_score(y_test, y_pred)))
+print('Accuracy_,mean:', np.mean(accuracies),'Accuracy_std: ', np.std(accuracies))

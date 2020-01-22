@@ -30,7 +30,7 @@ class EnableDataset(Dataset):
     label: when specified, the dataset will only contain data with the given label value
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], prevlabel=None, delay=0):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], phaselabel=None, prevlabel=None, delay=0):
 
         # print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -38,7 +38,7 @@ class EnableDataset(Dataset):
 
         for subjects in subject_list:
                 filename = dataDir +'AB' + subjects+'/Features/'+'AB' + subjects+ '_Features_'+ str(300-delay) + '.csv'
-                print('subject ID:' + subjects)
+                # print('subject ID:' + subjects)
                 if not os.path.exists(filename):
                     print(filename, 'not found')
                     continue
@@ -54,8 +54,9 @@ class EnableDataset(Dataset):
                 for index in range(0,raw_data.shape[0]):
                     trigger = raw_data.loc[index,'Trigger']
                     trigger=str(int(trigger))
+                    phase = raw_data.loc[index,'Leg Phase']
                     if prevlabel is not None:
-                    	if float(trigger[0]) == prevlabel and float(trigger[2]) != 6 and float(trigger[0]) !=6:
+                    	if float(phase) == phaselabel and float(trigger[0]) == prevlabel and float(trigger[2]) != 6 and float(trigger[0]) !=6:
 	                        # trigger = raw_data.loc[index,'_Trigger']
 	                        # trigger=str(int(trigger))
 	                        triggers.append(trigger) # triggers can be used to compare translational and steady-state error
