@@ -22,7 +22,7 @@ BATCH_SIZE = 32
 LEARNING_RATE = 1e-5
 WEIGHT_DECAY = 1e-3
 NUMB_CLASS = 36
-NUB_EPOCH=60
+NUB_EPOCH=80
 ############################################
 
 
@@ -86,13 +86,13 @@ def weight_classes(dataset):
     return weights
 
 
-BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 15),bands=16,hop_length=27)
-# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 5),bands=16,hop_length=27)
+# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
+# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 10),bands=16,hop_length=27)
 
-save_object(BIO_train,'BIO_train_melspectro_reduced.pkl')
+# save_object(BIO_train,'BIO_train_melspectro_36output.pkl')
 
-# with open('BIO_train_melspectro_5label.pkl', 'rb') as input:
-    # BIO_train = pickle.load(input)
+with open('BIO_train_melspectro_36output.pkl', 'rb') as input:
+    BIO_train = pickle.load(input)
 
 
 train_size = int(0.8 * len(BIO_train))+1
@@ -132,6 +132,7 @@ def train(model, loader, num_epoch = 20): # Train the model
     val_history=[]
     print("Start training...")
     model.train()
+    pre_val_acc =0
     for i in range(num_epoch):
         running_loss = []
         for batch, label in tqdm(loader):
@@ -145,7 +146,16 @@ def train(model, loader, num_epoch = 20): # Train the model
             optimizer.step()
             loss_history.append(np.mean(running_loss))
         val_acc = evaluate(model, valloader)
+
+        if val_acc> pre_val_acc:
+        	print(val_acc,pre_val_acc)
+        	pre_val_acc = val_acc
+        	torch.save(model.state_dict(), './36-output/models/bestmodel.pth')
+        	print("########model saved##########")
+
+
         val_history.append(val_acc)
+        
         print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss),val_acc))
     print("Done!")
     return loss_history, val_history
@@ -171,7 +181,12 @@ def evaluate(model, loader):
     return acc
 
 loss_history, val_history =train(model, trainloader, num_epoch)
-print("Evaluate on validation set...")
-evaluate(model, valloader)
+# print("Evaluate on validation set...")
+# evaluate(model, valloader)
+
+
+model = Network()
+model = model.to(device)
+model.load_state_dict(torch.load('./36-output/models/bestmodel.pth'))
 print("Evaluate on test set")
 evaluate(model, testloader)

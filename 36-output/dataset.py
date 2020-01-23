@@ -55,7 +55,7 @@ class EnableDataset(Dataset):
 
                 gait_events = ['Right_Heel_Contact','Right_Toe_Off','Left_Heel_Contact','Left_Toe_Off']
                 for event in gait_events:
-                    print(event)
+                    # print(event)
                     while not pd.isnull(raw_data.loc[index, event]):
                         trigger = raw_data.loc[index, event+'_Trigger']
                         trigger=str(int(trigger))
@@ -66,9 +66,9 @@ class EnableDataset(Dataset):
                             trigger=str(int(trigger))
                             triggers.append(trigger) # triggers can be used to compare translational and steady-state error
                             prev = float(trigger[0])
-                            current = float(trigger[1])
+                            current = float(trigger[2])
                             labels = np.append(labels, [prev*6 + current], axis=0)
-                            print('label:', prev*6 + current)
+                            # print('label:', prev*6 + current)
                             if float(trigger[2]) == 6:
                                 print('***********',trigger[2])
                             self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
