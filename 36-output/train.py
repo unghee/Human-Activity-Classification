@@ -163,7 +163,7 @@ def evaluate(model, loader):
             label = label.to(device)
             pred = model(batch)
             totalloss += criterion(pred, label)
-            count +=1
+            count += 1
             correct += (torch.argmax(pred,dim=1) % 6 == label% 6).sum().item()
     acc = correct/len(loader.dataset)
     print("Evaluation loss: {}".format(totalloss/count))
