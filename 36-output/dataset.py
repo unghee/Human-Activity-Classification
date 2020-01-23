@@ -30,7 +30,7 @@ class EnableDataset(Dataset):
     label: when specified, the dataset will only contain data with the given label value
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, transform=None,bands=None,hop_length=None):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, output_type="6", sensors=["imu","emg", "goin"], mode="bilateral", label=None, transform=None,bands=None,hop_length=None):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -41,7 +41,6 @@ class EnableDataset(Dataset):
         for subjects in subject_list:
             for i in range(data_range[0], data_range[1]):
                 filename = dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i
-                print(filename)
                 if not os.path.exists(filename):
                     print(filename, 'not found')
                     continue
@@ -52,38 +51,58 @@ class EnableDataset(Dataset):
                 timesteps = []
                 triggers = []
                 index = 0
+                gait_event_types = []
 
                 gait_events = ['Right_Heel_Contact','Right_Toe_Off','Left_Heel_Contact','Left_Toe_Off']
                 for event in gait_events:
-                    # print(event)
                     while not pd.isnull(raw_data.loc[index, event]):
                         trigger = raw_data.loc[index, event+'_Trigger']
                         trigger=str(int(trigger))
-                        # if label is None or float(trigger[0]) == label or float(trigger[2]) != 6  and float(trigger[0]) !=6:
                         if float(trigger[2]) != 6 and float(trigger[0]) !=6:
                             timesteps.append(raw_data.loc[index, event])
                             trigger = raw_data.loc[index, event+'_Trigger']
                             trigger=str(int(trigger))
                             triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-                            prev = float(trigger[0])
-                            current = float(trigger[2])
-                            labels = np.append(labels, [prev*6 + current], axis=0)
-                            # print('label:', prev*6 + current)
-                            if float(trigger[2]) == 6:
-                                print('***********',trigger[2])
+
+                            if output_type =="6":
+                                labels = np.append(labels,[float(trigger[2])], axis =0)
+                            else:
+                                labels = np.append(labels, [float(trigger[0])*6 + float(trigger[2])], axis=0)
+                            if "right" in event.lower():
+                                gait_event_types.append("Right")
+                            else:
+                                gait_event_types.append("Left")
+                                
                             self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
                         index += 1
                     index = 0
 
                 for idx,timestep in enumerate(timesteps):
+                    data = raw_data.loc[timestep-window_size-1:timestep-2,:]
                     if timestep-window_size-1 >= 0:
-                        data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
-                        if not time_series:
-                            # img= self.spectrogram2(data)/128.0-1.0
-                            img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)
-                            # plt.imshow(img)
-                            # plt.show()
+                        if mode == "ipsilateral":
+                            data = data.filter(regex='(?=.*'+ gait_event_types[idx] + '|Mode|Waist)(?!.*Toe)(?!.*Heel)(.+)', axis=1)
+                        elif mode == "contralateral":
+                            opposite = "Left" if gait_event_types[idx] == "Right" else "Right"
+                            data = data.filter(regex='(?=.*'+ opposite + '|Mode|Waist)(?!.*Toe)(?!.*Heel)(.+)', axis=1)
+                        else:
+                            data = data.filter(regex="^((?!Heel|Toe).)*$", axis=1)
 
+                        regex = "(?=Mode|.*Ankle.*|.*Knee.*"
+                        # regex = "(?=Mode)"
+                        if "imu" in sensors:
+                            regex += "|.*A[xyz].*"
+                        if "goin" in sensors:
+                            regex += "|.*G[xyz].*"
+                        if "emg" in sensors:
+                            regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
+                        # if "goin" in sensors:
+                        regex += ")"
+                        data = data.filter(regex=regex, axis=1)
+
+                        data = np.array(data)
+                        if not time_series:
+                            img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)
                             self.dataset.append((img,labels[idx]))
                         else:
                             self.dataset.append((data.T,labels[idx]))
