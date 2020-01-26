@@ -34,9 +34,10 @@ class EnableDataset(Dataset):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
-        self.prev_label = np.array([], dtype=np.int64)
+        prev_label = np.array([], dtype=np.int64)
         self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
         self.transform = transform
+        one_hot_embed= torch.eye(5)
 
         for subjects in subject_list:
             for i in range(data_range[0], data_range[1]):
@@ -66,7 +67,7 @@ class EnableDataset(Dataset):
                             labels = np.append(labels,[float(trigger[2])], axis =0)
                             if float(trigger[2]) == 6:
                                 print('***********',trigger[2])
-                            self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
+                            prev_label = np.append(prev_label,[float(trigger[0])], axis =0)
                         index += 1
                     index = 0
 
@@ -78,8 +79,9 @@ class EnableDataset(Dataset):
                             img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)
                             # plt.imshow(img)
                             # plt.show()
+                            onehot = one_hot_embed[int(prev_label[idx])]
 
-                            self.dataset.append((img,labels[idx]))
+                            self.dataset.append((img,labels[idx],onehot))
                         else:
                             self.dataset.append((data.T,labels[idx]))
         print("load dataset done")
@@ -89,12 +91,12 @@ class EnableDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, index):
-        img, label = self.dataset[index]
+        img, label,onehot = self.dataset[index]
         if self.transform:
             img = F.to_pil_image(np.uint8(img))
             img = self.transform(img)
             img = np.array(img)
-        return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
+        return torch.FloatTensor(img), torch.LongTensor(np.array(label) ), onehot
 
     def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
         vals = []

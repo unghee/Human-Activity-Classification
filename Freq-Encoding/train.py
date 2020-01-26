@@ -22,7 +22,7 @@ BATCH_SIZE = 32
 LEARNING_RATE = 1e-5
 WEIGHT_DECAY = 1e-3
 NUMB_CLASS = 5
-NUB_EPOCH=60
+NUB_EPOCH=80
 ############################################
 
 
@@ -39,17 +39,18 @@ class Network(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),
             )
         self.drop_out = nn.Dropout()
-        self.fc1 = nn.Linear( 4096, 2000)
+        self.fc1 = nn.Linear( 4101, 2000)
         # self.fc1 = nn.Linear( 8192, 2000)
         # self.fc1 = nn.Linear( 20480, 2000)
         self.fc2 = nn.Linear(2000, NUMB_CLASS)
 
 
-    def forward(self,x):
+    def forward(self,x,y):
         x = self.sclayer1(x)
         x = self.sclayer2(x)
         x = x.reshape(x.size(0), -1)
         x = self.drop_out(x)
+        x = torch.cat((x,y),1)
         x = self.fc1(x)
         x = self.fc2(x)
 
@@ -65,7 +66,7 @@ def save_object(obj, filename):
 def weight_classes(dataset):
     trainloader = DataLoader(dataset, shuffle=False,batch_size=BATCH_SIZE)
     classes = [0,0,0,0,0,0,0]
-    for data, labels in trainloader:
+    for data, labels, _ in trainloader:
         for x in range(labels.size()[0]):
             classes[labels[x]] +=1
     print(classes)
@@ -89,13 +90,13 @@ def weight_classes(dataset):
     return weights
 
 
-BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
-# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 5),bands=16,hop_length=27)
+# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27,window_size=500)
+BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 5),bands=16,hop_length=27,window_size=500)
 
-save_object(BIO_train,'BIO_train_melspectro_reduced.pkl')
+# save_object(BIO_train,'BIO_train_melspectro_added_groundtruth.pkl')
 
-# with open('BIO_train_melspectro_5label.pkl', 'rb') as input:
-    # BIO_train = pickle.load(input)
+# with open('BIO_train_melspectro_added_groundtruth.pkl', 'rb') as input:
+#     BIO_train = pickle.load(input)
 
 
 train_size = int(0.8 * len(BIO_train))+1
@@ -133,14 +134,16 @@ def train(model, loader, num_epoch = 20): # Train the model
     val_history=[]
     print("Start training...")
     model.train()
+    pre_val_acc =0
     for i in range(num_epoch):
         running_loss = []
-        for batch, label in tqdm(loader):
+        for batch, label, onehot in tqdm(loader):
             batch = batch.to(device)
             label = label.to(device)
+            onehot = onehot.to(device)
             label = label -1 # indexing start from 1 (removing sitting conditon)
             optimizer.zero_grad()
-            pred = model(batch)
+            pred = model(batch,onehot)
             loss = criterion(pred, label)
             running_loss.append(loss.item())
             loss.backward()
@@ -148,6 +151,13 @@ def train(model, loader, num_epoch = 20): # Train the model
             loss_history.append(np.mean(running_loss))
         val_acc = evaluate(model, valloader)
         val_history.append(val_acc)
+
+        if val_acc> pre_val_acc:
+            print(val_acc,pre_val_acc)
+            pre_val_acc = val_acc
+            torch.save(model.state_dict(), './Freq-Encoding/models/bestmodel.pth')
+            print("########model saved##########")
+
         print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss),val_acc))
     print("Done!")
     return loss_history, val_history
@@ -160,11 +170,12 @@ def evaluate(model, loader):
     with torch.no_grad():
         count = 0
         totalloss = 0
-        for batch, label in tqdm(loader):
+        for batch, label, onehot in tqdm(loader):
             batch = batch.to(device)
             label = label-1 # indexing start from 1 (removing sitting conditon)
             label = label.to(device)
-            pred = model(batch)
+            onehot = onehot.to(device)
+            pred = model(batch,onehot)
             totalloss += criterion(pred, label)
             count +=1
             correct += (torch.argmax(pred,dim=1)==label).sum().item()
@@ -174,7 +185,10 @@ def evaluate(model, loader):
     return acc
 
 loss_history, val_history =train(model, trainloader, num_epoch)
-print("Evaluate on validation set...")
-evaluate(model, valloader)
+
+model = Network()
+model = model.to(device)
+model.load_state_dict(torch.load('./Freq-Encoding/models/bestmodel.pth'))
+
 print("Evaluate on test set")
 evaluate(model, testloader)
