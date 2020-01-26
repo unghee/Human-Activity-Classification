@@ -135,12 +135,12 @@ def train(model, loader, num_epoch = 20): # Train the model
     pre_val_acc =0
     for i in range(num_epoch):
         running_loss = []
-        for batch, label in tqdm(loader):
+        for batch, label, types in tqdm(loader):
             batch = batch.to(device)
             label = label.to(device)
             optimizer.zero_grad()
             pred = model(batch)
-            loss = criterion(pred, label[:,0])
+            loss = criterion(pred, label)
             running_loss.append(loss.item())
             loss.backward()
             optimizer.step()
@@ -152,7 +152,6 @@ def train(model, loader, num_epoch = 20): # Train the model
         	pre_val_acc = val_acc
         	torch.save(model.state_dict(), './36-output/models/bestmodel.pth')
         	print("########model saved##########")
-
 
         val_history.append(val_acc)
 
@@ -172,19 +171,17 @@ def evaluate(model, loader):
     with torch.no_grad():
         count = 0
         totalloss = 0
-        for batch, label in tqdm(loader):
+        for batch, label, types in tqdm(loader):
             batch = batch.to(device)
             label = label.to(device)
             pred = model(batch)
-            totalloss += criterion(pred, label[:,0])
+            totalloss += criterion(pred, label)
             count += 1
-            correct += (torch.argmax(pred,dim=1) % 6 == label[:,0]% 6).sum().item()
-            steady_state_correct += (np.logical_and(torch.argmax(pred,dim=1) % 6 == label[:,0]% 6,label[:,0] == label[:,1])).sum().item()
-            tot_steady_state += (label[:,0] == label[:,1]).sum().item()
-            transitional_correct += (np.logical_and(torch.argmax(pred,dim=1) % 6 == label[:,0]% 6,label[:,0] != label[:,1])).sum().item()
-            tot_transitional += (label[:,0] != label[:,1]).sum().item()
-            print(torch.argmax(pred,dim=1))
-            print(label)
+            correct += (torch.argmax(pred,dim=1) % 6 == label % 6).sum().item()
+            steady_state_correct += (np.logical_and(torch.argmax(pred,dim=1) % 6 == label % 6, types == 1)).sum().item()
+            tot_steady_state += (types == 1).sum().item()
+            transitional_correct += (np.logical_and(torch.argmax(pred,dim=1) % 6 == label % 6, types == 0)).sum().item()
+            tot_transitional += (types == 0).sum().item()
     acc = correct/len(loader.dataset)
     ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
     tr_acc = transitional_correct/tot_transitional if tot_transitional != 0 else "No transitional samples used"

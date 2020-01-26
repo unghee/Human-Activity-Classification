@@ -47,7 +47,8 @@ class EnableDataset(Dataset):
                 raw_data = pd.read_csv(filename)
 
                 segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
-                labels = np.empty(shape=(0,2), dtype=np.int64)
+                labels = np.array([], dtype=np.int64)
+                timestep_type = []
                 timesteps = []
                 triggers = []
                 index = 0
@@ -65,9 +66,15 @@ class EnableDataset(Dataset):
                             triggers.append(trigger) # triggers can be used to compare translational and steady-state error
 
                             if output_type =="6":
-                                labels = np.append(labels,[(float(trigger[2]),float(trigger[0]))], axis =0)
+                                labels = np.append(labels,[float(trigger[2])], axis =0)
                             else:
-                                labels = np.append(labels, [(float(trigger[0])*6 + float(trigger[2], float(trigger[0])))], axis=0)
+                                labels = np.append(labels, [float(trigger[0])*6 + float(trigger[2])], axis=0)
+
+                            if trigger[0] == trigger[2]:
+                                timestep_type.append(1)
+                            else:
+                                timestep_type.append(0)
+
                             if "right" in event.lower():
                                 gait_event_types.append("Right")
                             else:
@@ -101,9 +108,9 @@ class EnableDataset(Dataset):
                         data = np.array(data)
                         if not time_series:
                             img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)
-                            self.dataset.append((img,labels[idx]))
+                            self.dataset.append((img,labels[idx], timestep_type[idx]))
                         else:
-                            self.dataset.append((data.T,labels[idx]))
+                            self.dataset.append((data.T,labels[idx], timestep_type[idx]))
         print("load dataset done")
 
 
@@ -111,12 +118,12 @@ class EnableDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, index):
-        img, label = self.dataset[index]
+        img, label, timestep_type = self.dataset[index]
         if self.transform:
             img = F.to_pil_image(np.uint8(img))
             img = self.transform(img)
             img = np.array(img)
-        return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
+        return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type
 
     def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
         vals = []
