@@ -140,7 +140,7 @@ def train(model, loader, num_epoch = 20): # Train the model
             label = label.to(device)
             optimizer.zero_grad()
             pred = model(batch)
-            loss = criterion(pred, label)
+            loss = criterion(pred, label[:,0])
             running_loss.append(loss.item())
             loss.backward()
             optimizer.step()
@@ -155,7 +155,7 @@ def train(model, loader, num_epoch = 20): # Train the model
 
 
         val_history.append(val_acc)
-        
+
         print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss),val_acc))
     print("Done!")
     return loss_history, val_history
@@ -163,6 +163,10 @@ def train(model, loader, num_epoch = 20): # Train the model
 def evaluate(model, loader):
     model.eval()
     correct = 0
+    steady_state_correct = 0
+    tot_steady_state = 0
+    transitional_correct = 0
+    tot_transitional = 0
     # labels = [0,0,0,0,0,0,0]
     # totalcount = [0,0,0,0,0,0,0]
     with torch.no_grad():
@@ -172,12 +176,22 @@ def evaluate(model, loader):
             batch = batch.to(device)
             label = label.to(device)
             pred = model(batch)
-            totalloss += criterion(pred, label)
+            totalloss += criterion(pred, label[:,0])
             count += 1
-            correct += (torch.argmax(pred,dim=1) % 6 == label% 6).sum().item()
+            correct += (torch.argmax(pred,dim=1) % 6 == label[:,0]% 6).sum().item()
+            steady_state_correct += (np.logical_and(torch.argmax(pred,dim=1) % 6 == label[:,0]% 6,label[:,0] == label[:,1])).sum().item()
+            tot_steady_state += (label[:,0] == label[:,1]).sum().item()
+            transitional_correct += (np.logical_and(torch.argmax(pred,dim=1) % 6 == label[:,0]% 6,label[:,0] != label[:,1])).sum().item()
+            tot_transitional += (label[:,0] != label[:,1]).sum().item()
+            print(torch.argmax(pred,dim=1))
+            print(label)
     acc = correct/len(loader.dataset)
+    ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
+    tr_acc = transitional_correct/tot_transitional if tot_transitional != 0 else "No transitional samples used"
     print("Evaluation loss: {}".format(totalloss/count))
     print("Evaluation accuracy: {}".format(acc))
+    print("Steady-state accuracy: {}".format(ss_acc))
+    print("Transistional accuracy: {}".format(tr_acc))
     return acc
 
 loss_history, val_history =train(model, trainloader, num_epoch)

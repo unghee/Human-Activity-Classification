@@ -47,7 +47,7 @@ class EnableDataset(Dataset):
                 raw_data = pd.read_csv(filename)
 
                 segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
-                labels = np.array([], dtype=np.int64)
+                labels = np.empty(shape=(0,2), dtype=np.int64)
                 timesteps = []
                 triggers = []
                 index = 0
@@ -65,14 +65,14 @@ class EnableDataset(Dataset):
                             triggers.append(trigger) # triggers can be used to compare translational and steady-state error
 
                             if output_type =="6":
-                                labels = np.append(labels,[float(trigger[2])], axis =0)
+                                labels = np.append(labels,[(float(trigger[2]),float(trigger[0]))], axis =0)
                             else:
-                                labels = np.append(labels, [float(trigger[0])*6 + float(trigger[2])], axis=0)
+                                labels = np.append(labels, [(float(trigger[0])*6 + float(trigger[2], float(trigger[0])))], axis=0)
                             if "right" in event.lower():
                                 gait_event_types.append("Right")
                             else:
                                 gait_event_types.append("Left")
-                                
+
                             self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
                         index += 1
                     index = 0
@@ -89,14 +89,12 @@ class EnableDataset(Dataset):
                             data = data.filter(regex="^((?!Heel|Toe).)*$", axis=1)
 
                         regex = "(?=Mode|.*Ankle.*|.*Knee.*"
-                        # regex = "(?=Mode)"
                         if "imu" in sensors:
                             regex += "|.*A[xyz].*"
                         if "goin" in sensors:
                             regex += "|.*G[xyz].*"
                         if "emg" in sensors:
                             regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
-                        # if "goin" in sensors:
                         regex += ")"
                         data = data.filter(regex=regex, axis=1)
 
