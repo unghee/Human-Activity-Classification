@@ -14,14 +14,16 @@ from sklearn.decomposition import PCA, sparse_encode
 from sklearn import preprocessing
 from sklearn.pipeline import Pipeline
 
+RESULT_NAME= './results/LDA/accuracy_nway.txt'
+
+
+
 ## for N way classifieres
 numb_class= [5,2,2,2,2]
 len_class = len(numb_class)
 len_phase = 4
 BIO_trains=[]
 
-# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
-# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'])
 BIO_trains_len=0
 
 k = 0 
@@ -32,7 +34,7 @@ for i in range(1,len_class+1):
 		# print(k)
 		k +=1
 
-# wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
+
 wholeloaders = []
 
 k = 0 
@@ -42,15 +44,12 @@ for i in range(1,len_class+1):
 		# print(k)
 		k +=1
 
-# run lda without mode specific
-# run lda with mode specific
 models=[]
 correct=0
 for i in range(1,len_class+1):
 	for j in range(1,len_phase+1):
 		model = LinearDiscriminantAnalysis()
 		models.append(model)
-
 
 
 k =0 
@@ -78,6 +77,7 @@ for i in range(1, len_class+1):
 
 
 
+		accuracies=[[[] for x in range(len_class) ]for y in range(len_phase)]
 
 		for train_index, test_index in skf.split(X, y):
 			# print("TRAIN:", len(train_index), "TEST:", len(test_index), 'percentage', len(test_index)/len(train_index))
@@ -106,6 +106,12 @@ for i in range(1, len_class+1):
 
 			correct += (y_pred==np.array(y_test)).sum().item()
 			print(accuracy_score(y_test, y_pred))
+
+			accuracies[i,j].append(accuracy_score(y_test, y_pred))
+
+
+
+
 		k +=1
 	# del pca, pca_object,X_pca
 	# del pca, pcanumcomps, X_train, X_test, y_train, y_test
@@ -113,3 +119,8 @@ for i in range(1, len_class+1):
 print('total number of classifiers: ' ,k)
 print('Accuracy_total:', correct/BIO_trains_len)
 
+print('writing...')
+with open(RESULT_NAME, 'w') as f:
+	for item in accuracies:
+		f.write("%s\n" % item)
+f.close()
