@@ -56,14 +56,12 @@ class EnableDataset(Dataset):
                     phase = raw_data.loc[index,'Leg Phase']
                     if prevlabel is not None:
                     	if float(phase) == phaselabel and float(trigger[0]) == prevlabel and float(trigger[2]) != 6 and float(trigger[0]) !=6:
-	
-	                        triggers.append(trigger) # triggers can be used to compare tr	                        label = float(trigger[2])
-	                        if float(trigger[2]) == 6:
+                            triggers.append(trigger)
+                            label = float(trigger[2])
+                            if float(trigger[2]) == 6:
 	                            print('***********',trigger[2])
-
-
-	                        data = np.array(raw_data.loc[index, :'Contra RF AR6'])
-	                        self.dataset.append((data.T,label))
+                            data = np.array(raw_data.loc[index, :'Contra RF AR6'])
+                            self.dataset.append((data.T,label))
                     else:
                     	if float(trigger[2]) != 6 and float(trigger[0]) !=6:
 
