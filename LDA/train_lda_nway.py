@@ -14,6 +14,10 @@ from sklearn.decomposition import PCA, sparse_encode
 from sklearn import preprocessing
 from sklearn.pipeline import Pipeline
 
+import sys,os
+sys.path.append('.')
+from utils import *
+
 RESULT_NAME= './results/LDA/accuracy_nway.txt'
 
 
@@ -31,9 +35,12 @@ for i in range(1,len_class+1):
 	for j in range(1,len_phase+1):
 		BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],phaselabel=j,prevlabel=i))
 		BIO_trains_len += len(BIO_trains[k])
-		# print(k)
 		k +=1
 
+# save_object(BIO_trains,'LDA_nway.pkl')
+
+# with open('LDA_nway.pkl', 'rb') as input:
+#     BIO_trains = pickle.load(input)
 
 wholeloaders = []
 
@@ -53,6 +60,9 @@ for i in range(1,len_class+1):
 
 
 k =0 
+
+accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
+
 for i in range(1, len_class+1):
 	for j in range(1,len_phase+1):
 		print("**************mode #", i, "****phase", j)
@@ -67,17 +77,11 @@ for i in range(1, len_class+1):
 			X = batch
 			y = label 
 
-		# pca = PCA()
-		# pca_object = pca.fit(X)
-		# X_pca = pca_object.transform(X)
 
 		scale = preprocessing.StandardScaler()
 		pca = PCA()
 		scale_PCA = Pipeline([('norm',scale),('dimred',pca)])
 
-
-
-		accuracies=[[[] for x in range(len_class) ]for y in range(len_phase)]
 
 		for train_index, test_index in skf.split(X, y):
 			# print("TRAIN:", len(train_index), "TEST:", len(test_index), 'percentage', len(test_index)/len(train_index))
@@ -85,8 +89,6 @@ for i in range(1, len_class+1):
 			X_train, X_test = X[train_index], X[test_index]
 			y_train, y_test = y[train_index], y[test_index]
 
-			# models[k].fit(X_train, y_train)
-			# y_pred = models[k].predict(X_test)
 
 			## dimension reduction
 			scale.fit(X_train)
@@ -107,20 +109,24 @@ for i in range(1, len_class+1):
 			correct += (y_pred==np.array(y_test)).sum().item()
 			print(accuracy_score(y_test, y_pred))
 
-			accuracies[i,j].append(accuracy_score(y_test, y_pred))
-
-
-
+			accuracies[i-1][j-1].append(accuracy_score(y_test, y_pred))
 
 		k +=1
-	# del pca, pca_object,X_pca
-	# del pca, pcanumcomps, X_train, X_test, y_train, y_test
+	del pca, pcanumcomps, X_train, X_test, y_train, y_test
 
 print('total number of classifiers: ' ,k)
-print('Accuracy_total:', correct/BIO_trains_len)
+# print('Accuracy_total:', correct/BIO_trains_len)
+
+
 
 print('writing...')
+accuracies = np.asarray(accuracies)
+
 with open(RESULT_NAME, 'w') as f:
-	for item in accuracies:
-		f.write("%s\n" % item)
+	for row in accuracies:
+		for items in row:
+			for item in items:
+				f.write("%s" % item)
+				f.write(' ') 
+			f.write("\n")
 f.close()

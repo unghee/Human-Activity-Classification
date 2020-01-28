@@ -14,9 +14,14 @@ from sklearn import preprocessing
 from sklearn.decomposition import PCA, sparse_encode
 from sklearn.pipeline import Pipeline
 
+import os
 
-RESULT_NAME= './results/LDA/accuracy.txt'
+MODE = 'bilateral'
+RESULT_NAME= './results/LDA/accuracy_'+MODE+'.txt'
 
+
+if not os.path.exists('./results/LDA'):
+	os.makedirs('./results/LDA')
 
 # BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
 BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'])
@@ -52,7 +57,7 @@ for train_index, test_index in skf.split(X, y):
 	accuracies.append(accuracy_score(y_test, y_pred))
 	i +=1
 
-	print(accuracy_score(y_val, y_pred))
+	print(accuracy_score(y_test, y_pred))
 
 
 

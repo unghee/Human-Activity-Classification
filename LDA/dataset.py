@@ -44,7 +44,6 @@ class EnableDataset(Dataset):
                     continue
                 raw_data = pd.read_csv(filename)
 
-                # labels = np.array([], dtype=np.int64)
                 timesteps = []
                 triggers = []
                 index = 0
@@ -57,48 +56,26 @@ class EnableDataset(Dataset):
                     phase = raw_data.loc[index,'Leg Phase']
                     if prevlabel is not None:
                     	if float(phase) == phaselabel and float(trigger[0]) == prevlabel and float(trigger[2]) != 6 and float(trigger[0]) !=6:
-	                        # trigger = raw_data.loc[index,'_Trigger']
-	                        # trigger=str(int(trigger))
-	                        triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-	                        # labels = np.append(labels,[float(trigger[2])], axis =0)
-	                        label = float(trigger[2])
+	
+	                        triggers.append(trigger) # triggers can be used to compare tr	                        label = float(trigger[2])
 	                        if float(trigger[2]) == 6:
 	                            print('***********',trigger[2])
-	                        # self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
-	                        # if float(trigger[2]) == 5:
-	                        # 	pdb.set_trace()
+
+
 	                        data = np.array(raw_data.loc[index, :'Contra RF AR6'])
 	                        self.dataset.append((data.T,label))
                     else:
                     	if float(trigger[2]) != 6 and float(trigger[0]) !=6:
-	                        # trigger = raw_data.loc[index,'_Trigger']
-	                        # trigger=str(int(trigger))
+
 	                        triggers.append(trigger) # triggers can be used to compare translational and steady-state error
-	                        # labels = np.append(labels,[float(trigger[2])], axis =0)
+
 	                        label = float(trigger[2])
 	                        if float(trigger[2]) == 6:
 	                            print('***********',trigger[2])
-	                        # self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
-	                        # if float(trigger[2]) == 5:
-	                        # 	pdb.set_trace()
+
 	                        data = np.array(raw_data.loc[index, :'Contra RF AR6'])
 	                        self.dataset.append((data.T,label))	                	
-                    # index += 1
-                # index =0
 
-
-                # for idx,timestep in enumerate(timesteps):
-                #     if timestep-window_size-1 >= 0:
-                #         data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
-                #         if not time_series:
-                #             # img= self.spectrogram2(data)/128.0-1.0
-                #             img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)
-                #             # plt.imshow(img)
-                #             # plt.show()
-
-                #             self.dataset.append((img,labels[idx]))
-                #         else:
-                #             self.dataset.append((data.T,labels[idx]))
         print("load dataset done")
 
 
