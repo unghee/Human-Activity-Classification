@@ -58,7 +58,7 @@ class EnableDataset(Dataset):
                         trigger = raw_data.loc[index, event+'_Trigger']
                         trigger=str(int(trigger))
                         # if label is None or float(trigger[0]) == label or float(trigger[2]) != 6  and float(trigger[0]) !=6:
-                        if float(trigger[2]) != 6 and float(trigger[0]) !=6:
+                        if float(trigger[2]) != 6 and float(trigger[0]) !=6 and float(trigger[0]) !=0 and float(trigger[2]) !=0:
                             timesteps.append(raw_data.loc[index, event])
                             trigger = raw_data.loc[index, event+'_Trigger']
                             trigger=str(int(trigger))
