@@ -107,4 +107,5 @@ class EnableDataset(Dataset):
 
     def __getitem__(self, index):
         img, label = self.dataset[index]
-        return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
+        # return torch.FloatTensor(img), torch.LongTensor(np.array(label) )
+        return img, np.array(label) 

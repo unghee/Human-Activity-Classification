@@ -9,7 +9,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from dataset import EnableDataset
 
 from sklearn.metrics import accuracy_score
-from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.model_selection import KFold, StratifiedKFold,train_test_split, cross_val_score
 from sklearn import preprocessing
 from sklearn.decomposition import PCA, sparse_encode
 from sklearn.pipeline import Pipeline
@@ -55,13 +55,17 @@ model = LinearDiscriminantAnalysis()
 # pca = PCA()
 # scale_PCA = Pipeline([('norm',scale),('dimred',pca)])
 
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
 
-
+# scores = cross_val_score(pipe, X_train, y_train, cv=5)
+# scores = cross_val_score(model, X_train, y_train, cv=5)
+# print('Validation accuracy: %.3f %s' % ( scores.mean(), scores))
 accuracies =[]
-for train_index, test_index in skf.split(X, y):
-
-	X_train, X_test = X[train_index], X[test_index]
-	y_train, y_test = y[train_index], y[test_index]
+i = 0
+for train_index, val_index in skf.split(X_train, y_train):
+	
+	X_train, X_val = X[train_index], X[val_index]
+	y_train, y_val = y[train_index], y[val_index]
 
 
 	## Dimension reduction
@@ -81,12 +85,26 @@ for train_index, test_index in skf.split(X, y):
 	# y_pred=pcaldafit.predict(feats_test_PCA[:,0:pcanumcomps]).ravel()
 	# correct += (y_pred==np.array(y_test)).sum().item()
 
+	if i>1 and i< 6:
+		# y_train = np.ones((len(y_train),))
+		# y_train.astype(int)
+		# y_train = torch.tensor(y_train)
+		# y_train = y_train.cpu()
+		y_train = y_train*100
 	model.fit(X_train, y_train)
-	y_pred = model.predict(X_test)
-	correct += (y_pred==np.array(y_test)).sum().item()
-	accuracies.append(accuracy_score(y_test, y_pred))
-	print(accuracy_score(y_test, y_pred))
+	y_pred = model.predict(X_val)
+	correct += (y_pred==np.array(y_val)).sum().item()
+	accuracies.append(accuracy_score(y_val, y_pred))
+	i +=1
 
 
-print('Accuracy_total:', correct/len(BIO_train))
-print('Accuracy_,mean:', np.mean(accuracies),'Accuracy_std: ', np.std(accuracies))
+	print(accuracy_score(y_val, y_pred))
+
+
+
+# # print('Accuracy_total:', correct/len(BIO_train))
+# print('Accuracy_,mean:', np.mean(accuracies),'Accuracy_std: ', np.std(accuracies))
+# model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+print(accuracy_score(y_test, y_pred))
