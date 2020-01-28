@@ -27,7 +27,7 @@ NUB_EPOCH=200
 ############################################
 
 MODEL_NAME = './Freq-Encoding/models/bestmodel'+ \
-        		'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUM_EPOCH)+'.pth'
+        		'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'.pth'
 
 
 class Network(nn.Module):
@@ -93,31 +93,6 @@ def weight_classes(dataset):
     return weights
 
 
-# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
-# BIO_train = EnableDataset(subject_list= ['156'],data_range=(1, 5),bands=16,hop_length=27)
-
-# save_object(BIO_train,'BIO_train_melspectro_reduced.pkl')
-
-# with open('BIO_train_melspectro_5label.pkl', 'rb') as input:
-    # BIO_train = pickle.load(input)
-
-# Define cross-validation parameters
-
-
-
-# train_size = int(0.8 * len(BIO_train))
-# test_size = int((len(BIO_train) - train_size)/2)
-# train_dataset, test_dataset, val_dataset = torch.utils.data.random_split(BIO_train, [train_size, test_size, test_size])
-
-# trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-
-
-
-# valloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
-# testloader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
-
-
-# numb_class = 5
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
@@ -195,16 +170,11 @@ def evaluate(model, loader):
 
 
 
-BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
-# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 5),bands=16,hop_length=27)
-save_object(BIO_train,'BIO_train_melspectro_500s_bands_16_hop_length_27.pkl')
+# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
 
-# with open('BIO_train_melspectro_reduced.pkl', 'rb') as input:
-    # BIO_train = pickle.load(input)
+with open('BIO_train_melspectro_500s_bands_16_hop_length_27.pkl', 'rb') as input:
+    BIO_train = pickle.load(input)
 
-numfolds = 3
-skf = KFold(n_splits = numfolds, shuffle = True)
-# sss = ShuffleSplit(n_splits=1, test_size=0.1)
 
 wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
@@ -222,36 +192,8 @@ testloader =  DataLoader(test_dataset, batch_size=BATCH_SIZE)
 train_dataset = TensorDataset( X_train, y_train)
 trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
-# classes = [0,0,0,0,0,0,0]
-# for data, labels in trainloader:
-#     for x in range(labels.size()[0]):
-#         classes[labels[x]] +=1
-# print(classes)
 
-
-
-# val_dataset = TensorDataset( X_test, y_test)
-# valloader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
-# valloader = testloader
 train(model, trainloader, num_epoch)
-
-
-# for train_index, val_index in skf.split(X_train, y_train):
-# 	print("TRAIN:", train_index, "TEST:", val_index)
-# 	X_train_split, X_val = X_train[train_index], X_train[val_index]
-# 	y_train_split, y_val = y_train[train_index], y_train[val_index]
-
-# 	# sss.get_n_splits(X_train,y_train)
-# 	# train_index, val_index = next(sss.split(X_train, y_train))
-
-# 	train_dataset = TensorDataset( X_train_split, y_train_split)
-# 	val_dataset = TensorDataset( X_val, y_val)
-
-# 	trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-# 	valloader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
-
-
-# 	loss_history, val_history =train(model, trainloader, num_epoch)
 
 
 model = Network()
@@ -261,4 +203,3 @@ model.load_state_dict(torch.load(MODEL_NAME))
 print("Evaluate on test set")
 evaluate(model, testloader)
 
-# print('Accuracy_,mean:', np.mean(accuracies),'Accuracy_std: ', np.std(accuracies))
