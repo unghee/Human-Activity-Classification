@@ -15,7 +15,9 @@ import pickle
 
 from sklearn.model_selection import KFold, StratifiedKFold,ShuffleSplit ,train_test_split
 
-
+import copy
+import os
+import random
 
 ########## SETTINGS  ########################
 
@@ -23,11 +25,24 @@ BATCH_SIZE = 32
 LEARNING_RATE = 1e-5
 WEIGHT_DECAY = 1e-3
 NUMB_CLASS = 5
-NUB_EPOCH=200
+NUB_EPOCH= 200
+numfolds = 10
+DATA_LOAD_BOOL = True
+
+
 ############################################
 
-MODEL_NAME = './Freq-Encoding/models/bestmodel'+ \
+MODEL_NAME = './models/Freq-Encoding/bestmodel'+ \
         		'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'.pth'
+
+RESULT_NAME= './results/Freq-Encoding/accuracy'+ \
+        		'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'.txt'
+
+if not os.path.exists('./models/Freq-Encoding'):
+	os.makedirs('./models/Freq-Encoding')
+
+if not os.path.exists('./results/Freq-Encoding'):
+	os.makedirs('./results/Freq-Encoding')
 
 
 class Network(nn.Module):
@@ -100,14 +115,14 @@ print('GPU USED?',torch.cuda.is_available())
 model = Network()
 model = model.to(device)
 
-# weights = weight_classes(BIO_train)
-
-# weights = torch.FloatTensor([0.0, 1.0, 9693/2609, 9693/3250, 9693/1181, 9693/1133, 9693/530 ])
-# weights = weights.to(device)
-# criterion = nn.CrossEntropyLoss(weight=weights)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 num_epoch = NUB_EPOCH
+
+init_state = copy.deepcopy(model.state_dict())
+init_state_opt = copy.deepcopy(optimizer.state_dict())
+
+
 
 def train(model, loader, num_epoch = 20): # Train the model
     loss_history=[]
@@ -117,7 +132,7 @@ def train(model, loader, num_epoch = 20): # Train the model
     pre_loss=10000
     for i in range(num_epoch):
         running_loss = []
-        for batch, label in tqdm(loader):
+        for batch, label in tqdm(loader,disable=DATA_LOAD_BOOL):
             batch = batch.to(device)
             label = label.to(device)
             label = label -1 # indexing start from 1 (removing sitting conditon)
@@ -134,11 +149,11 @@ def train(model, loader, num_epoch = 20): # Train the model
         loss_history.append(loss_mean)
         val_acc =0
         if loss_mean< pre_loss:
-        	print(loss_mean,pre_loss)
+        	# print(loss_mean,pre_loss)
         	pre_loss = loss_mean
         	# torch.save(model.state_dict(), './Freq-Encoding/models/bestmodel_.pth')
         	torch.save(model.state_dict(), MODEL_NAME)
-        	print("########model saved##########")
+        	print("*model saved*")
         print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss),val_acc))
     print("Done!")
     return loss_history, val_history
@@ -151,7 +166,7 @@ def evaluate(model, loader):
     with torch.no_grad():
         count = 0
         totalloss = 0
-        for batch, label in tqdm(loader):
+        for batch, label in tqdm(loader,disable=DATA_LOAD_BOOL):
             batch = batch.to(device)
             label = label-1 # indexing start from 1 (removing sitting conditon)
             label = label.to(device)
@@ -165,8 +180,13 @@ def evaluate(model, loader):
     print("Evaluation accuracy: {}".format(acc))
     return acc
 
-
-
+def seed_torch(seed=1029):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
 
 
 
@@ -179,27 +199,45 @@ with open('BIO_train_melspectro_500s_bands_16_hop_length_27.pkl', 'rb') as input
 wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
 
-for batch, label in tqdm(wholeloader):
+for batch, label in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
 	X = batch
 	y = label 
 
 accuracies =[]
 
-X_train, X_test, y_train, y_test=train_test_split(X, y, test_size=0.1)
-test_dataset = TensorDataset( X_test, y_test)
-testloader =  DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
-train_dataset = TensorDataset( X_train, y_train)
-trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+skf = KFold(n_splits = numfolds, shuffle = True)
+i = 0 
+
+for train_index, test_index in skf.split(X, y):
+
+	model.load_state_dict(init_state)
+	optimizer.load_state_dict(init_state_opt)
+
+	X_train, X_test = X[train_index], X[test_index]
+	y_train, y_test = y[train_index], y[test_index]
+
+	train_dataset = TensorDataset( X_train, y_train)
+	test_dataset = TensorDataset( X_test, y_test)
+
+	trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+	testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
+
+	print("######################Fold:{}#####################3".format(i+1))
+	train(model, trainloader, num_epoch)
+
+	model.load_state_dict(torch.load(MODEL_NAME))
+
+	# print("Evaluate on test set")
+	accs=evaluate(model, testloader)
+	accuracies.append(accs)
+
+	i +=1
+
+print('saved on the results')
 
 
-train(model, trainloader, num_epoch)
-
-
-model = Network()
-model = model.to(device)
-model.load_state_dict(torch.load(MODEL_NAME))
-
-print("Evaluate on test set")
-evaluate(model, testloader)
-
+with open(RESULT_NAME, 'w') as f:
+	for item in accuracies:
+		f.write("%s\n" % item)
+f.close()
