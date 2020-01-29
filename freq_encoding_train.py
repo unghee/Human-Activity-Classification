@@ -69,8 +69,8 @@ init_state = copy.deepcopy(model.state_dict())
 init_state_opt = copy.deepcopy(optimizer.state_dict())
 
 
-# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
-BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=16,hop_length=27,model_type='CNN')
+BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27,model_type='CNN')
+# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=16,hop_length=27,model_type='CNN')
 # with open('BIO_train_melspectro_500s_bands_16_hop_length_27.pkl', 'rb') as input:
 #     BIO_train = pickle.load(input)
 
