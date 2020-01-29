@@ -37,13 +37,46 @@ class EnableDataset(Dataset):
             self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
             self.transform = transform
 
-            exclude_list = ['AB156_Circuit_005', 'AB156_Circuit_050','AB185_Circuit_002', 'AB185_Circuit_008',
-                            'AB185_Circuit_010', 'AB188_Circuit_027','AB188_Circuit_032']
+            exclude_list = [
+                # 'AB194_Circuit_009',
+                # 'AB194_Circuit_017',
+                # 'AB194_Circuit_018',
+                # 'AB194_Circuit_026',
+                # "AB194_Circuit_033",
+                # "AB194_Circuit_038",
+                # "AB193_Circuit_022",
+                # "AB193_Circuit_043",
+                # "AB192_Circuit_034",
+                'AB190_Circuit_013',
+                # 'AB190_Circuit_014',
+                # 'AB190_Circuit_037',
+                'AB190_Circuit_045',
+                # "AB191_Circuit_001",
+                'AB191_Circuit_002',
+                'AB191_Circuit_022',
+                # "AB191_Circuit_047",
+                # "AB191_Circuit_049",
+                "AB189_Circuit_004",
+                # "AB189_Circuit_024",
+                "AB189_Circuit_032",
+                # "AB189_Circuit_035",
+                # "AB188_Circuit_027",
+                "AB188_Circuit_032",
+                "AB186_Circuit_002",
+                # "AB186_Circuit_004",
+                # "AB186_Circuit_016",
+                # "AB186_Circuit_050",
+                # "AB185_Circuit_002",
+                "AB185_Circuit_008",
+                "AB185_Circuit_010",
+                "AB156_Circuit_005",
+                "AB156_Circuit_050"
+            ]
 
             for subjects in subject_list:
                 for i in range(data_range[0], data_range[1]):
                     filename = dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i
-                    if not os.path.exists(filename) or ('AB' + subjects+ '_Circuit_%03d_post.csv'% i) in exclude_list:
+                    if not os.path.exists(filename) or ('AB' + subjects+ '_Circuit_%03d_post'% i) in exclude_list:
                         print(filename, 'not found or excluded')
                         continue
                     raw_data = pd.read_csv(filename)
