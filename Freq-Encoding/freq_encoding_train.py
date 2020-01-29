@@ -70,37 +70,39 @@ init_state_opt = copy.deepcopy(optimizer.state_dict())
 
 
 # BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
-
-with open('BIO_train_melspectro_500s_bands_16_hop_length_27.pkl', 'rb') as input:
-    BIO_train = pickle.load(input)
+BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=16,hop_length=27)
+# with open('BIO_train_melspectro_500s_bands_16_hop_length_27.pkl', 'rb') as input:
+#     BIO_train = pickle.load(input)
 
 
 wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
 
-for batch, label in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
+for batch, label, dtype in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
 	X = batch
-	y = label 
+	y = label
+	types = dtype
 
 accuracies =[]
 
 
 skf = KFold(n_splits = numfolds, shuffle = True)
-i = 0 
+i = 0
 
 
 train_class=trainclass(model,optimizer,DATA_LOAD_BOOL,device,criterion,MODEL_NAME)
 
-for train_index, test_index in skf.split(X, y):
+for train_index, test_index in skf.split(X, y, types):
 
 	model.load_state_dict(init_state)
 	optimizer.load_state_dict(init_state_opt)
 
 	X_train, X_test = X[train_index], X[test_index]
 	y_train, y_test = y[train_index], y[test_index]
+	types_train, types_test = types[train_index], types[test_index]
 
-	train_dataset = TensorDataset( X_train, y_train)
-	test_dataset = TensorDataset( X_test, y_test)
+	train_dataset = TensorDataset( X_train, y_train, types_train)
+	test_dataset = TensorDataset( X_test, y_test, types_test)
 
 	trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 	testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)

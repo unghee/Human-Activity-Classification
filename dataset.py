@@ -28,7 +28,7 @@ class EnableDataset(Dataset):
     window_size: how many samples to consider for a label
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='../Data/', subject_list=['156'], model_type="CNN", data_range=(1, 10), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
+    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN", data_range=(1, 10), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
         self.model_type = model_type
         if self.model_type == "CNN":
             print("    range: [%d, %d)" % (data_range[0], data_range[1]))
@@ -37,11 +37,47 @@ class EnableDataset(Dataset):
             self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
             self.transform = transform
 
+            exclude_list = [
+                # 'AB194_Circuit_009',
+                # 'AB194_Circuit_017',
+                # 'AB194_Circuit_018',
+                # 'AB194_Circuit_026',
+                # "AB194_Circuit_033",
+                # "AB194_Circuit_038",
+                # "AB193_Circuit_022",
+                # "AB193_Circuit_043",
+                # "AB192_Circuit_034",
+                'AB190_Circuit_013',
+                # 'AB190_Circuit_014',
+                # 'AB190_Circuit_037',
+                'AB190_Circuit_045',
+                # "AB191_Circuit_001",
+                'AB191_Circuit_002',
+                'AB191_Circuit_022',
+                # "AB191_Circuit_047",
+                # "AB191_Circuit_049",
+                "AB189_Circuit_004",
+                # "AB189_Circuit_024",
+                "AB189_Circuit_032",
+                # "AB189_Circuit_035",
+                # "AB188_Circuit_027",
+                "AB188_Circuit_032",
+                "AB186_Circuit_002",
+                # "AB186_Circuit_004",
+                # "AB186_Circuit_016",
+                # "AB186_Circuit_050",
+                # "AB185_Circuit_002",
+                "AB185_Circuit_008",
+                "AB185_Circuit_010",
+                "AB156_Circuit_005",
+                "AB156_Circuit_050"
+            ]
+
             for subjects in subject_list:
                 for i in range(data_range[0], data_range[1]):
                     filename = dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i
-                    if not os.path.exists(filename):
-                        print(filename, 'not found')
+                    if not os.path.exists(filename) or ('AB' + subjects+ '_Circuit_%03d_post'% i) in exclude_list:
+                        print(filename, 'not found or excluded')
                         continue
                     raw_data = pd.read_csv(filename)
 
@@ -91,11 +127,11 @@ class EnableDataset(Dataset):
                             else:
                                 data = data.filter(regex="^((?!Heel|Toe).)*$", axis=1)
 
-                            regex = "(?=Mode|.*Ankle.*|.*Knee.*"
+                            regex = "(?=Mode"
                             if "imu" in sensors:
                                 regex += "|.*A[xyz].*"
                             if "goin" in sensors:
-                                regex += "|.*G[xyz].*"
+                                regex += "|.*G[xyz].*|.*Ankle.*|.*Knee.*"
                             if "emg" in sensors:
                                 regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
                             regex += ")"

@@ -87,12 +87,12 @@ def weight_classes(dataset):
 
 
 # BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
-# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 10),bands=16,hop_length=27)
+BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 10),bands=16,hop_length=27)
 
-# save_object(BIO_train,'BIO_train_melspectro_36output.pkl')
+save_object(BIO_train,'BIO_train_melspectro_36output.pkl')
 
-with open('BIO_train_melspectro_36output.pkl', 'rb') as input:
-    BIO_train = pickle.load(input)
+# with open('BIO_train_melspectro_36output.pkl', 'rb') as input:
+#     BIO_train = pickle.load(input)
 
 
 train_size = int(0.8 * len(BIO_train))+1
@@ -150,7 +150,7 @@ def train(model, loader, num_epoch = 20): # Train the model
         if val_acc> pre_val_acc:
         	print(val_acc,pre_val_acc)
         	pre_val_acc = val_acc
-        	torch.save(model.state_dict(), './36-output/models/bestmodel.pth')
+        	# torch.save(model.state_dict(), './36-output/models/bestmodel.pth')
         	print("########model saved##########")
 
         val_history.append(val_acc)

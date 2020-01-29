@@ -22,7 +22,7 @@ from utils import *
 MODE = 'bilateral'
 CLASSIFIER = 'SVM'
 
-RESULT_NAME= './results/LDA/'+CLASSIFIER+'_accuracy_nway.txt'
+RESULT_NAME= './results/LDA/'+CLASSIFIER+'_accuracy_nway_NEW.txt'
 
 
 
@@ -34,10 +34,10 @@ BIO_trains=[]
 
 BIO_trains_len=0
 
-k = 0 
+k = 0
 for i in range(1,len_class+1):
 	for j in range(1,len_phase+1):
-		BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],phaselabel=j,prevlabel=i))
+		BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],phaselabel=j,prevlabel=i,model_type='LDA'))
 		# BIO_trains_len += len(BIO_trains[k])
 		k +=1
 
@@ -48,7 +48,7 @@ for i in range(1,len_class+1):
 
 wholeloaders = []
 
-k = 0 
+k = 0
 for i in range(1,len_class+1):
 	for j in range(1,len_phase+1):
 		BIO_trains_len += len(BIO_trains[k])
@@ -58,6 +58,10 @@ for i in range(1,len_class+1):
 
 models=[]
 correct=0
+steady_state_correct = 0
+tot_steady_state = 0
+transitional_correct = 0
+tot_transitional = 0
 for i in range(1,len_class+1):
 	for j in range(1,len_phase+1):
 		if CLASSIFIER == 'LDA':
@@ -67,7 +71,7 @@ for i in range(1,len_class+1):
 		models.append(model)
 
 
-k =0 
+k =0
 
 
 accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
@@ -82,9 +86,10 @@ for i in range(1, len_class+1):
 		skf = StratifiedKFold(n_splits = numfolds, shuffle = True)
 
 
-		for batch, label in tqdm(wholeloaders[k]):
+		for batch, label, dtype in tqdm(wholeloaders[k]):
 			X = batch
-			y = label 
+			y = label
+			types = dtype
 
 
 		scale = preprocessing.StandardScaler()
@@ -92,11 +97,12 @@ for i in range(1, len_class+1):
 		scale_PCA = Pipeline([('norm',scale),('dimred',pca)])
 
 
-		for train_index, test_index in skf.split(X, y):
+		for train_index, test_index in skf.split(X, y, types):
 			# print("TRAIN:", len(train_index), "TEST:", len(test_index), 'percentage', len(test_index)/len(train_index))
 
 			X_train, X_test = X[train_index], X[test_index]
 			y_train, y_test = y[train_index], y[test_index]
+			types_train, types_test = types[train_index], types[test_index]
 
 
 			## dimension reduction
@@ -125,9 +131,12 @@ for i in range(1, len_class+1):
 				models[k].fit(feats_train_norm,y_train)
 				y_pred=models[k].predict(feats_test_norm)
 
-
-
 			correct += (y_pred==np.array(y_test)).sum().item()
+			steady_state_correct += (np.logical_and(y_pred==np.array(y_test), types_test == 1)).sum().item()
+			tot_steady_state += (types == 1).sum().item()
+			transitional_correct += (np.logical_and(y_pred==np.array(y_test), types_test == 0)).sum().item()
+			tot_transitional += (types == 0).sum().item()
+
 			print(accuracy_score(y_test, y_pred))
 
 			accuracies[i-1][j-1].append(accuracy_score(y_test, y_pred))
@@ -149,6 +158,6 @@ with open(RESULT_NAME, 'w') as f:
 		for items in row:
 			for item in items:
 				f.write("%s" % item)
-				f.write(' ') 
+				f.write(' ')
 			f.write("\n")
 f.close()
