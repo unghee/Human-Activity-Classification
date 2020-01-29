@@ -127,11 +127,11 @@ class EnableDataset(Dataset):
                             else:
                                 data = data.filter(regex="^((?!Heel|Toe).)*$", axis=1)
 
-                            regex = "(?=Mode|.*Ankle.*|.*Knee.*"
+                            regex = "(?=Mode"
                             if "imu" in sensors:
                                 regex += "|.*A[xyz].*"
                             if "goin" in sensors:
-                                regex += "|.*G[xyz].*"
+                                regex += "|.*G[xyz].*|.*Ankle.*|.*Knee.*"
                             if "emg" in sensors:
                                 regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
                             regex += ")"
