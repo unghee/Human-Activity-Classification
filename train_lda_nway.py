@@ -13,12 +13,16 @@ from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.decomposition import PCA, sparse_encode
 from sklearn import preprocessing
 from sklearn.pipeline import Pipeline
+from sklearn.svm import SVC
 
 import sys,os
 sys.path.append('.')
 from utils import *
 
-RESULT_NAME= './results/LDA/accuracy_nway.txt'
+MODE = 'bilateral'
+CLASSIFIER = 'SVM'
+
+RESULT_NAME= './results/LDA/'+CLASSIFIER+'_accuracy_nway_NEW.txt'
 
 
 
@@ -33,8 +37,8 @@ BIO_trains_len=0
 k = 0
 for i in range(1,len_class+1):
 	for j in range(1,len_phase+1):
-		BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],phaselabel=j,prevlabel=i))
-		BIO_trains_len += len(BIO_trains[k])
+		BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],phaselabel=j,prevlabel=i,model_type='LDA'))
+		# BIO_trains_len += len(BIO_trains[k])
 		k +=1
 
 # save_object(BIO_trains,'LDA_nway.pkl')
@@ -47,6 +51,7 @@ wholeloaders = []
 k = 0
 for i in range(1,len_class+1):
 	for j in range(1,len_phase+1):
+		BIO_trains_len += len(BIO_trains[k])
 		wholeloaders.append(DataLoader(BIO_trains[k],batch_size=len(BIO_trains[k])))
 		# print(k)
 		k +=1
@@ -59,11 +64,15 @@ transitional_correct = 0
 tot_transitional = 0
 for i in range(1,len_class+1):
 	for j in range(1,len_phase+1):
-		model = LinearDiscriminantAnalysis()
+		if CLASSIFIER == 'LDA':
+			model = LinearDiscriminantAnalysis()
+		elif CLASSIFIER == 'SVM':
+			model = SVC(kernel = 'linear', C = 10)
 		models.append(model)
 
 
 k =0
+
 
 accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
 
@@ -97,20 +106,30 @@ for i in range(1, len_class+1):
 
 
 			## dimension reduction
-			scale.fit(X_train)
-			scale_PCA.fit(X_train)
+			
+			if CLASSIFIER == 'LDA':
+				scale_PCA.fit(X_train)
 
-			feats_train_PCA = scale_PCA.transform(X_train)
-			feats_test_PCA = scale_PCA.transform(X_test)
+				feats_train_PCA = scale_PCA.transform(X_train)
+				feats_test_PCA = scale_PCA.transform(X_test)   
 
-			pcaexplainedvar = np.cumsum(scale_PCA.named_steps['dimred'].explained_variance_ratio_)
-			pcanumcomps = min(min(np.where(pcaexplainedvar > 0.95))) + 1
+				pcaexplainedvar = np.cumsum(scale_PCA.named_steps['dimred'].explained_variance_ratio_)                
+				pcanumcomps = min(min(np.where(pcaexplainedvar > 0.95))) + 1
 
-			unique_modes = np.unique(y_train)
-			models[k].set_params(priors = np.ones(len(unique_modes))/len(unique_modes))
+				unique_modes = np.unique(y_train)
+				models[k].set_params(priors = np.ones(len(unique_modes))/len(unique_modes))
 
-			pcaldafit = models[k].fit(feats_train_PCA[:,0:pcanumcomps],y_train)
-			y_pred=pcaldafit.predict(feats_test_PCA[:,0:pcanumcomps]).ravel()
+				models[k].fit(feats_train_PCA[:,0:pcanumcomps],y_train)
+				y_pred=models[k].predict(feats_test_PCA[:,0:pcanumcomps]).ravel()
+
+			elif CLASSIFIER == 'SVM':
+				scale.fit(X_train)
+
+				feats_train_norm = scale.transform(X_train)
+				feats_test_norm = scale.transform(X_test )
+
+				models[k].fit(feats_train_norm,y_train)
+				y_pred=models[k].predict(feats_test_norm)
 
 			correct += (y_pred==np.array(y_test)).sum().item()
 			steady_state_correct += (np.logical_and(y_pred==np.array(y_test), types_test == 1)).sum().item()
@@ -123,10 +142,11 @@ for i in range(1, len_class+1):
 			accuracies[i-1][j-1].append(accuracy_score(y_test, y_pred))
 
 		k +=1
-	del pca, pcanumcomps, X_train, X_test, y_train, y_test
+	del pca, X_train, X_test, y_train, y_test
 
 print('total number of classifiers: ' ,k)
-# print('Accuracy_total:', correct/BIO_trains_len)
+print('total number of data: ' ,BIO_trains_len)
+print('Accuracy_total:', correct/BIO_trains_len)
 
 
 

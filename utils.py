@@ -80,9 +80,9 @@ class trainclass():
 	            totalloss += self.criterion(pred, label)
 	            count +=1
 	            correct += (torch.argmax(pred,dim=1)==label).sum().item()
-	            steady_state_correct += (np.logical_and(torch.argmax(pred,dim=1) % 6 == label % 6, types == 1)).sum().item()
+	            steady_state_correct += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), types == 1)).sum().item()
 	            tot_steady_state += (types == 1).sum().item()
-	            transitional_correct += (np.logical_and(torch.argmax(pred,dim=1) % 6 == label % 6, types == 0)).sum().item()
+	            transitional_correct += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), types == 0)).sum().item()
 	            tot_transitional += (types == 0).sum().item()
 	    acc = correct/len(loader.dataset)
 

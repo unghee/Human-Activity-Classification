@@ -28,7 +28,7 @@ class EnableDataset(Dataset):
     window_size: how many samples to consider for a label
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='../Data/', subject_list=['156'], model_type="CNN", data_range=(1, 10), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
+    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN", data_range=(1, 10), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
         self.model_type = model_type
         if self.model_type == "CNN":
             print("    range: [%d, %d)" % (data_range[0], data_range[1]))
