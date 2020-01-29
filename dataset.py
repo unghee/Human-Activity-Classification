@@ -172,7 +172,23 @@ class EnableDataset(Dataset):
                                 label = float(trigger[2])
                                 if float(trigger[2]) == 6:
                                     print('***********',trigger[2])
-                                data = np.array(raw_data.loc[index, :'Contra RF AR6'])
+                                data = raw_data.loc[index, :'Contra RF AR6']
+                                if mode == "ipsilateral":
+                                    data = data.filter(regex='(?=.*Ispi.*|.*Waist.*)', axis=0)
+                                elif mode == "contralateral":
+                                    data = data.filter(regex='(?=.*Contra.*|.*Waist.*)', axis=0)
+
+                                regex = "(?=Mode|.*Ankle.*|.*Knee.*"
+                                if "imu" in sensors:
+                                    regex += "|.*A[xyz].*"
+                                if "goin" in sensors:
+                                    regex += "|.*G[xyz].*|.*Ankle.*|.*Knee.*"
+                                if "emg" in sensors:
+                                    regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
+                                regex += ")"
+                                data = data.filter(regex=regex, axis=0)
+                                data = np.array(data)
+
                                 self.dataset.append((data.T,label, timestep_type[-1]))
                         else:
                             if float(trigger[2]) != 6 and float(trigger[0]) !=6:
@@ -183,7 +199,24 @@ class EnableDataset(Dataset):
                                 if float(trigger[2]) == 6:
                                     print('***********',trigger[2])
 
-                                data = np.array(raw_data.loc[index, :'Contra RF AR6'])
+                                data = raw_data.loc[index, :'Contra RF AR6']
+
+                                if mode == "ipsilateral":
+                                    data = data.filter(regex='(?=.*Ispi.*|.*Waist.*)', axis=0)
+                                elif mode == "contralateral":
+                                    data = data.filter(regex='(?=.*Contra.*|.*Waist.*)', axis=0)
+
+                                regex = "(?=Mode|.*Ankle.*|.*Knee.*"
+                                if "imu" in sensors:
+                                    regex += "|.*A[xyz].*"
+                                if "goin" in sensors:
+                                    regex += "|.*G[xyz].*|.*Ankle.*|.*Knee.*"
+                                if "emg" in sensors:
+                                    regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
+                                regex += ")"
+                                data = data.filter(regex=regex, axis=0)
+                                data = np.array(data)
+
                                 self.dataset.append((data.T,label, timestep_type[-1]))
         print("load dataset done")
 
