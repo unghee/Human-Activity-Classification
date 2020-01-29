@@ -51,16 +51,19 @@ class EnableDataset(Dataset):
 
                 # while not pd.isnull(raw_data.loc[index,'Trigger']):
                 for index in range(0,raw_data.shape[0]):
+                    # pdb.set_trace()
                     trigger = raw_data.loc[index,'Trigger']
                     trigger=str(int(trigger))
                     phase = raw_data.loc[index,'Leg Phase']
                     if prevlabel is not None:
-                    	if float(phase) == phaselabel and float(trigger[0]) == prevlabel and float(trigger[2]) != 6 and float(trigger[0]) !=6:
+                    	if float(phase) == phaselabel and float(trigger[0]) == prevlabel and float(trigger[2]) != 6 and float(trigger[0]) !=6 \
+                        and float(trigger[2]) != 0 and float(trigger[0]) !=0:
                             triggers.append(trigger)
                             label = float(trigger[2])
                             if float(trigger[2]) == 6:
 	                            print('***********',trigger[2])
                             data = np.array(raw_data.loc[index, :'Contra RF AR6'])
+                            # pdb.set_trace()
                             self.dataset.append((data.T,label))
                     else:
                     	if float(trigger[2]) != 6 and float(trigger[0]) !=6:
