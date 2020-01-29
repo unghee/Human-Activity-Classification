@@ -29,6 +29,10 @@ BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '19
 wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
 correct=0
+steady_state_correct = 0
+tot_steady_state = 0
+transitional_correct = 0
+tot_transitional = 0
 
 
 # Define cross-validation parameters
@@ -37,23 +41,30 @@ skf = KFold(n_splits = numfolds, shuffle = True)
 # skf = StratifiedKFold(n_splits = numfolds, shuffle = True)
 
 
-for batch, label in tqdm(wholeloader):
+for batch, label, dtype in tqdm(wholeloader):
 	X = batch
-	y = label 
+	y = label
+	types = dtype
 
 model = LinearDiscriminantAnalysis()
 
 # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
 accuracies =[]
 i = 0
-for train_index, test_index in skf.split(X, y):
-	
+for train_index, test_index in skf.split(X, y, types):
+
 	X_train, X_test = X[train_index], X[test_index]
 	y_train, y_test = y[train_index], y[test_index]
+	types_train, types_test = types[train_index], types[test_index]
 
 	model.fit(X_train, y_train)
 	y_pred = model.predict(X_test)
 	correct += (y_pred==np.array(y_test)).sum().item()
+	steady_state_correct += (np.logical_and(y_pred==np.array(y_test), types_test == 1)).sum().item()
+	tot_steady_state += (types == 1).sum().item()
+	transitional_correct += (np.logical_and(y_pred==np.array(y_test), types_test == 0)).sum().item()
+	tot_transitional += (types == 0).sum().item()
+
 	accuracies.append(accuracy_score(y_test, y_pred))
 	i +=1
 

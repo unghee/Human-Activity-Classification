@@ -38,7 +38,7 @@ class trainclass():
 	    pre_loss=10000
 	    for i in range(num_epoch):
 	        running_loss = []
-	        for batch, label in tqdm(loader,disable=self.data_bool):
+	        for batch, label, types in tqdm(loader,disable=self.data_bool):
 	            batch = batch.to(self.device)
 	            label = label.to(self.device)
 	            label = label -1 # indexing start from 1 (removing sitting conditon)
@@ -48,14 +48,11 @@ class trainclass():
 	            running_loss.append(loss.item())
 	            loss.backward()
 	            self.optimizer.step()
-	            
-	        # val_acc = evaluate(model, valloader)
-	        # val_history.append(val_acc)
+
 	        loss_mean= np.mean(running_loss)
 	        loss_history.append(loss_mean)
 	        val_acc =0
 	        if loss_mean< pre_loss:
-	        	# print(loss_mean,pre_loss)
 	        	pre_loss = loss_mean
 	        	torch.save(self.model.state_dict(), self.model_name)
 	        	print("*model saved*")
@@ -68,10 +65,14 @@ class trainclass():
 	def evaluate(self,loader):
 	    self.model.eval()
 	    correct = 0
+	    steady_state_correct = 0
+	    tot_steady_state = 0
+	    transitional_correct = 0
+	    tot_transitional = 0
 	    with torch.no_grad():
 	        count = 0
 	        totalloss = 0
-	        for batch, label in tqdm(loader,disable=self.data_bool):
+	        for batch, label, types in tqdm(loader,disable=self.data_bool):
 	            batch = batch.to(self.device)
 	            label = label-1 # indexing start from 1 (removing sitting conditon)
 	            label = label.to(self.device)
@@ -79,10 +80,18 @@ class trainclass():
 	            totalloss += self.criterion(pred, label)
 	            count +=1
 	            correct += (torch.argmax(pred,dim=1)==label).sum().item()
+	            steady_state_correct += (np.logical_and(torch.argmax(pred,dim=1) % 6 == label % 6, types == 1)).sum().item()
+	            tot_steady_state += (types == 1).sum().item()
+	            transitional_correct += (np.logical_and(torch.argmax(pred,dim=1) % 6 == label % 6, types == 0)).sum().item()
+	            tot_transitional += (types == 0).sum().item()
 	    acc = correct/len(loader.dataset)
 
+	    ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
+	    tr_acc = transitional_correct/tot_transitional if tot_transitional != 0 else "No transitional samples used"
 	    print("Evaluation loss: {}".format(totalloss/count))
 	    print("Evaluation accuracy: {}".format(acc))
+	    print("Steady-state accuracy: {}".format(ss_acc))
+	    print("Transistional accuracy: {}".format(tr_acc))
 	    return acc
 
 

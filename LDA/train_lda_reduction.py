@@ -21,6 +21,10 @@ BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '19
 wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
 correct=0
+steady_state_correct = 0
+tot_steady_state = 0
+transitional_correct = 0
+tot_transitional = 0
 
 
 # Define cross-validation parameters
@@ -29,25 +33,33 @@ skf = KFold(n_splits = numfolds, shuffle = True)
 # skf = StratifiedKFold(n_splits = numfolds, shuffle = True)
 
 
-for batch, label in tqdm(wholeloader):
+for batch, label, dtype in tqdm(wholeloader):
 	X = batch
-	y = label 
+	y = label
+	types = dtype
 
 model = LinearDiscriminantAnalysis()
 
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
+X_train, X_test, y_train, y_test = train_test_split((X,types), y, test_size=0.3, random_state=1)
+X_train, types_train = X_train
+X_test, types_test = X_test
 
 accuracies =[]
 i = 0
-for train_index, val_index in skf.split(X_train, y_train):
-	
+for train_index, val_index in skf.split(X_train, y_train, types_tain):
+
 	X_train, X_val = X[train_index], X[val_index]
 	y_train, y_val = y[train_index], y[val_index]
+	types_train, types_val = types[train_index], types[val_index]
 
 	model.fit(X_train, y_train)
 	y_pred = model.predict(X_val)
 	correct += (y_pred==np.array(y_val)).sum().item()
+	steady_state_correct += (np.logical_and(y_pred==np.array(y_val), types_val == 1)).sum().item()
+	tot_steady_state += (types == 1).sum().item()
+	transitional_correct += (np.logical_and(y_pred==np.array(y_val), types_val == 0)).sum().item()
+	tot_transitional += (types == 0).sum().item()
 	accuracies.append(accuracy_score(y_val, y_pred))
 	i +=1
 
@@ -77,7 +89,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_
 accuracies =[]
 i = 0
 for train_index, val_index in skf.split(X_train, y_train):
-	
+
 	X_train, X_val = X[train_index], X[val_index]
 	y_train, y_val = y[train_index], y[val_index]
 
@@ -85,9 +97,9 @@ for train_index, val_index in skf.split(X_train, y_train):
 	scale_PCA.fit(X_train)
 
 	feats_train_PCA = scale_PCA.transform(X_train)
-	feats_test_PCA = scale_PCA.transform(X_test)   
+	feats_test_PCA = scale_PCA.transform(X_test)
 
-	pcaexplainedvar = np.cumsum(scale_PCA.named_steps['dimred'].explained_variance_ratio_)                
+	pcaexplainedvar = np.cumsum(scale_PCA.named_steps['dimred'].explained_variance_ratio_)
 	pcanumcomps = min(min(np.where(pcaexplainedvar > 0.95))) + 1
 
 	unique_modes = np.unique(y_train)
@@ -98,7 +110,7 @@ for train_index, val_index in skf.split(X_train, y_train):
 	correct += (y_pred==np.array(y_test)).sum().item()
 
 	accuracies.append(accuracy_score(y_val, y_pred))
-	
+
 	print(accuracy_score(y_val, y_pred))
 
 	i +=1

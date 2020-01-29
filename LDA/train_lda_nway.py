@@ -30,7 +30,7 @@ BIO_trains=[]
 
 BIO_trains_len=0
 
-k = 0 
+k = 0
 for i in range(1,len_class+1):
 	for j in range(1,len_phase+1):
 		BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],phaselabel=j,prevlabel=i))
@@ -44,7 +44,7 @@ for i in range(1,len_class+1):
 
 wholeloaders = []
 
-k = 0 
+k = 0
 for i in range(1,len_class+1):
 	for j in range(1,len_phase+1):
 		wholeloaders.append(DataLoader(BIO_trains[k],batch_size=len(BIO_trains[k])))
@@ -53,13 +53,17 @@ for i in range(1,len_class+1):
 
 models=[]
 correct=0
+steady_state_correct = 0
+tot_steady_state = 0
+transitional_correct = 0
+tot_transitional = 0
 for i in range(1,len_class+1):
 	for j in range(1,len_phase+1):
 		model = LinearDiscriminantAnalysis()
 		models.append(model)
 
 
-k =0 
+k =0
 
 accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
 
@@ -73,9 +77,10 @@ for i in range(1, len_class+1):
 		skf = StratifiedKFold(n_splits = numfolds, shuffle = True)
 
 
-		for batch, label in tqdm(wholeloaders[k]):
+		for batch, label, dtype in tqdm(wholeloaders[k]):
 			X = batch
-			y = label 
+			y = label
+			types = dtype
 
 
 		scale = preprocessing.StandardScaler()
@@ -83,11 +88,12 @@ for i in range(1, len_class+1):
 		scale_PCA = Pipeline([('norm',scale),('dimred',pca)])
 
 
-		for train_index, test_index in skf.split(X, y):
+		for train_index, test_index in skf.split(X, y, types):
 			# print("TRAIN:", len(train_index), "TEST:", len(test_index), 'percentage', len(test_index)/len(train_index))
 
 			X_train, X_test = X[train_index], X[test_index]
 			y_train, y_test = y[train_index], y[test_index]
+			types_train, types_test = types[train_index], types[test_index]
 
 
 			## dimension reduction
@@ -95,9 +101,9 @@ for i in range(1, len_class+1):
 			scale_PCA.fit(X_train)
 
 			feats_train_PCA = scale_PCA.transform(X_train)
-			feats_test_PCA = scale_PCA.transform(X_test)   
+			feats_test_PCA = scale_PCA.transform(X_test)
 
-			pcaexplainedvar = np.cumsum(scale_PCA.named_steps['dimred'].explained_variance_ratio_)                
+			pcaexplainedvar = np.cumsum(scale_PCA.named_steps['dimred'].explained_variance_ratio_)
 			pcanumcomps = min(min(np.where(pcaexplainedvar > 0.95))) + 1
 
 			unique_modes = np.unique(y_train)
@@ -107,6 +113,11 @@ for i in range(1, len_class+1):
 			y_pred=pcaldafit.predict(feats_test_PCA[:,0:pcanumcomps]).ravel()
 
 			correct += (y_pred==np.array(y_test)).sum().item()
+			steady_state_correct += (np.logical_and(y_pred==np.array(y_test), types_test == 1)).sum().item()
+			tot_steady_state += (types == 1).sum().item()
+			transitional_correct += (np.logical_and(y_pred==np.array(y_test), types_test == 0)).sum().item()
+			tot_transitional += (types == 0).sum().item()
+
 			print(accuracy_score(y_test, y_pred))
 
 			accuracies[i-1][j-1].append(accuracy_score(y_test, y_pred))
@@ -127,6 +138,6 @@ with open(RESULT_NAME, 'w') as f:
 		for items in row:
 			for item in items:
 				f.write("%s" % item)
-				f.write(' ') 
+				f.write(' ')
 			f.write("\n")
 f.close()

@@ -37,11 +37,14 @@ class EnableDataset(Dataset):
             self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
             self.transform = transform
 
+            exclude_list = ['AB156_Circuit_005', 'AB156_Circuit_050','AB185_Circuit_002', 'AB185_Circuit_008',
+                            'AB185_Circuit_010', 'AB188_Circuit_027','AB188_Circuit_032']
+
             for subjects in subject_list:
                 for i in range(data_range[0], data_range[1]):
                     filename = dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i
-                    if not os.path.exists(filename):
-                        print(filename, 'not found')
+                    if not os.path.exists(filename) or ('AB' + subjects+ '_Circuit_%03d_post.csv'% i) in exclude_list:
+                        print(filename, 'not found or excluded')
                         continue
                     raw_data = pd.read_csv(filename)
 
