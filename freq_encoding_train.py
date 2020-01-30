@@ -27,6 +27,8 @@ from utils import *
 from networks import *
 
 
+from itertools import combinations
+
 
 def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]):
 
@@ -40,7 +42,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	numfolds = 3
 	DATA_LOAD_BOOL = True
 
-
+	SAVING_BOOL = True
 	############################################
 
 
@@ -60,12 +62,18 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_accuracy.txt'
 
+	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'.pkl'
+
 	if not os.path.exists('./models/Freq-Encoding'):
 		os.makedirs('./models/Freq-Encoding')
 
 
 	if not os.path.exists('./results/'+CLASSIFIER):
 		os.makedirs('./results/'+CLASSIFIER)
+
+	if not os.path.exists('./checkpoints/'+CLASSIFIER):
+		os.makedirs('./checkpoints/'+CLASSIFIER)
+
 	# if not os.path.exists('./results/Freq-Encoding'):
 	# 	os.makedirs('./results/Freq-Encoding')
 
@@ -73,10 +81,24 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
+	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 10),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+
+	INPUT_NUM=BIO_train.input_numb
+	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=16,hop_length=27,model_type='CNN')
+	# with open('BIO_train_melspectro_500s_bands_16_hop_length_27.pkl', 'rb') as input:
+	#     BIO_train = pickle.load(input)
+
+	if SAVING_BOOL:
+		save_object(BIO_train,SAVE_NAME)
+
+
+	wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
+
 
 	device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 	print('GPU USED?',torch.cuda.is_available())
-	model = Network(NUMB_CLASS)
+	model = Network(INPUT_NUM,NUMB_CLASS)
 	model = model.to(device)
 
 	criterion = nn.CrossEntropyLoss()
@@ -85,16 +107,6 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	init_state = copy.deepcopy(model.state_dict())
 	init_state_opt = copy.deepcopy(optimizer.state_dict())
-
-
-	BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
-	
-	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=16,hop_length=27,model_type='CNN')
-	# with open('BIO_train_melspectro_500s_bands_16_hop_length_27.pkl', 'rb') as input:
-	#     BIO_train = pickle.load(input)
-
-
-	wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
 
 	for batch, label, dtype in tqdm(wholeloader,disable=DATA_LOAD_BOOL):

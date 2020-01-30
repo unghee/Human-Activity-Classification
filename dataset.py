@@ -36,7 +36,7 @@ class EnableDataset(Dataset):
             self.prev_label = np.array([], dtype=np.int64)
             self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
             self.transform = transform
-
+            self.input_numb = 0
             exclude_list = [
                 # 'AB194_Circuit_009',
                 # 'AB194_Circuit_017',
@@ -127,7 +127,8 @@ class EnableDataset(Dataset):
                             else:
                                 data = data.filter(regex="^((?!Heel|Toe).)*$", axis=1)
 
-                            regex = "(?=Mode"
+                            # regex = "(?=Mode"
+                            regex = "(?=!Mode"
                             if "imu" in sensors:
                                 regex += "|.*A[xyz].*"
                             if "goin" in sensors:
@@ -136,8 +137,9 @@ class EnableDataset(Dataset):
                                 regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
                             regex += ")"
                             data = data.filter(regex=regex, axis=1)
-
+    
                             data = np.array(data)
+                            self.input_numb=np.shape(data)[1]
                             img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)
                             self.dataset.append((img,labels[idx], timestep_type[idx]))
         else:
@@ -178,7 +180,8 @@ class EnableDataset(Dataset):
                                 elif mode == "contralateral":
                                     data = data.filter(regex='(?=.*Contra.*|.*Waist.*)', axis=0)
 
-                                regex = "(?=Mode|.*Ankle.*|.*Knee.*"
+                                # regex = "(?=Mode|.*Ankle.*|.*Knee.*"
+                                regex = "(?=!Mode|.*Ankle.*|.*Knee.*"
                                 if "imu" in sensors:
                                     regex += "|.*A[xyz].*"
                                 if "goin" in sensors:
@@ -206,7 +209,8 @@ class EnableDataset(Dataset):
                                 elif mode == "contralateral":
                                     data = data.filter(regex='(?=.*Contra.*|.*Waist.*)', axis=0)
 
-                                regex = "(?=Mode|.*Ankle.*|.*Knee.*"
+                                # regex = "(?=Mode|.*Ankle.*|.*Knee.*"
+                                regex = "(?=!Mode|.*Ankle.*|.*Knee.*"
                                 if "imu" in sensors:
                                     regex += "|.*A[xyz].*"
                                 if "goin" in sensors:
@@ -216,6 +220,7 @@ class EnableDataset(Dataset):
                                 regex += ")"
                                 data = data.filter(regex=regex, axis=0)
                                 data = np.array(data)
+
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
         print("load dataset done")
@@ -254,8 +259,10 @@ class EnableDataset(Dataset):
         ###### STACKING UP MULTIPLE SPECTOGRAM APPROACH!
 
         vals = []
-        for i in range(0,17):
-            for x in range(3*i,3*(i+1)):
+        # for i in range(0,17):
+        #     for x in range(3*i,3*(i+1)):
+        for x in range(0,np.shape(segmented_data)[1]):
+
                 row = segmented_data[:,x]
                 melspec_full = librosa.feature.melspectrogram(y=row,sr=fs,n_fft=hop_length*2, hop_length=hop_length,n_mels=bands)
                 logspec_full = librosa.amplitude_to_db(melspec_full)

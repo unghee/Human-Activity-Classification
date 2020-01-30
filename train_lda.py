@@ -34,6 +34,7 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 
 	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27)
 	BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	
 	# BIO_train= EnableDataset(subject_list= ['156'])
 	wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 

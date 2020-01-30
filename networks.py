@@ -23,10 +23,10 @@ import random
 
 
 class Network(nn.Module):
-    def __init__(self,NUMB_CLASS):
+    def __init__(self,INPUT_NUM,NUMB_CLASS):
         super().__init__()
         self.sclayer1 = nn.Sequential(
-            nn.Conv2d(51, 128, kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(INPUT_NUM, 128, kernel_size=5, stride=1, padding=2),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
         self.sclayer2 = nn.Sequential(
