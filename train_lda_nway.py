@@ -20,7 +20,7 @@ sys.path.append('.')
 from utils import *
 
 MODE = 'bilateral'
-CLASSIFIER = 'SVM'
+CLASSIFIER = 'LDA'
 
 RESULT_NAME= './results/LDA/'+CLASSIFIER+'_accuracy_nway_NEW.txt'
 
@@ -57,6 +57,7 @@ for i in range(1,len_class+1):
 		k +=1
 
 models=[]
+tot=0
 correct=0
 steady_state_correct = 0
 tot_steady_state = 0
@@ -75,37 +76,36 @@ k =0
 
 
 accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
+ss_accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
+tr_accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
 
-for i in range(1, len_class+1):
-	for j in range(1,len_phase+1):
-		print("**************mode #", i, "****phase", j)
+for train_index, test_index in skf.split(X, y, types):
 
-		# Define cross-validation parameters
-		numfolds = 10
-		# kf = KFold(n_splits = numfolds, shuffle = True)
-		skf = StratifiedKFold(n_splits = numfolds, shuffle = True)
+	for i in range(1, len_class+1):
+		for j in range(1,len_phase+1):
+			print("**************mode #", i, "****phase", j)
 
-
-		for batch, label, dtype in tqdm(wholeloaders[k]):
-			X = batch
-			y = label
-			types = dtype
+			# Define cross-validation parameters
+			numfolds = 10
+			# kf = KFold(n_splits = numfolds, shuffle = True)
+			skf = StratifiedKFold(n_splits = numfolds, shuffle = True)
 
 
-		scale = preprocessing.StandardScaler()
-		pca = PCA()
-		scale_PCA = Pipeline([('norm',scale),('dimred',pca)])
+			for batch, label, dtype in tqdm(wholeloaders[k]):
+				X = batch
+				y = label
+				types = dtype
 
 
-		for train_index, test_index in skf.split(X, y, types):
+			scale = preprocessing.StandardScaler()
+			pca = PCA()
+			scale_PCA = Pipeline([('norm',scale),('dimred',pca)])
+		
 			# print("TRAIN:", len(train_index), "TEST:", len(test_index), 'percentage', len(test_index)/len(train_index))
 
 			X_train, X_test = X[train_index], X[test_index]
 			y_train, y_test = y[train_index], y[test_index]
 			types_train, types_test = types[train_index], types[test_index]
-
-
-			## dimension reduction
 			
 			if CLASSIFIER == 'LDA':
 				scale_PCA.fit(X_train)
@@ -132,21 +132,36 @@ for i in range(1, len_class+1):
 				y_pred=models[k].predict(feats_test_norm)
 
 			correct += (y_pred==np.array(y_test)).sum().item()
+			tot += len(y_test)
 			steady_state_correct += (np.logical_and(y_pred==np.array(y_test), types_test == 1)).sum().item()
-			tot_steady_state += (types == 1).sum().item()
+			tot_steady_state += (types_test == 1).sum().item()
 			transitional_correct += (np.logical_and(y_pred==np.array(y_test), types_test == 0)).sum().item()
-			tot_transitional += (types == 0).sum().item()
+			tot_transitional += (types_test == 0).sum().item()
 
-			print(accuracy_score(y_test, y_pred))
+			tot_acc = correct/tot
+			ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
+			tr_acc = transitional_correct/tot_transitional if tot_transitional != 0 else "No transitional samples used"
 
+			ss_accuracies[i-1][j-1].append(ss_acc) if tot_steady_state != 0 else "No steady state samples used"
+			tr_accuracies[i-1][j-1].append(tr_acc) if tot_transitional != 0 else "No transitional samples used"
 			accuracies[i-1][j-1].append(accuracy_score(y_test, y_pred))
 
-		k +=1
-	del pca, X_train, X_test, y_train, y_test
+			print(accuracy_score(y_test, y_pred))
+			print("Total accuracy: {}".format(accuracy_score(y_test, y_pred)))
+			print("Total correct: {}, number: {}, accuracy: {}".format(correct,tot,tot_acc))
+			print("Steady-state correct: {}, number: {}, accuracy: {}".format(steady_state_correct,tot_steady_state,ss_acc))
+			print("Transistional correct: {}, number: {}, accuracy: {}".format(transitional_correct,tot_transitional,tr_acc))
+			print(accuracy_score(y_test, y_pred))		
+
+			k +=1
+		del pca, X_train, X_test, y_train, y_test
 
 print('total number of classifiers: ' ,k)
 print('total number of data: ' ,BIO_trains_len)
 print('Accuracy_total:', correct/BIO_trains_len)
+print('Steady-state:', steady_state_correct/tot_steady_state )
+print('Transistional:', transitional_correct/tot_transitional)
+
 
 
 

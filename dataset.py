@@ -18,7 +18,7 @@ import torchvision.transforms.functional as F
 import librosa
 
 import librosa.display
-
+import pdb
 
 class EnableDataset(Dataset):
     '''
@@ -174,7 +174,7 @@ class EnableDataset(Dataset):
                                     print('***********',trigger[2])
                                 data = raw_data.loc[index, :'Contra RF AR6']
                                 if mode == "ipsilateral":
-                                    data = data.filter(regex='(?=.*Ispi.*|.*Waist.*)', axis=0)
+                                    data = data.filter(regex='(?=.*Ipsi.*|.*Waist.*)', axis=0)
                                 elif mode == "contralateral":
                                     data = data.filter(regex='(?=.*Contra.*|.*Waist.*)', axis=0)
 
@@ -202,7 +202,7 @@ class EnableDataset(Dataset):
                                 data = raw_data.loc[index, :'Contra RF AR6']
 
                                 if mode == "ipsilateral":
-                                    data = data.filter(regex='(?=.*Ispi.*|.*Waist.*)', axis=0)
+                                    data = data.filter(regex='(?=.*Ipsi.*|.*Waist.*)', axis=0)
                                 elif mode == "contralateral":
                                     data = data.filter(regex='(?=.*Contra.*|.*Waist.*)', axis=0)
 
