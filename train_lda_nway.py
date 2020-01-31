@@ -131,12 +131,12 @@ for train_index, test_index in skf.split(X, y, types):
 				models[k].fit(feats_train_norm,y_train)
 				y_pred=models[k].predict(feats_test_norm)
 
-			correct += (y_pred==np.array(y_test)).sum().item()
-			tot += len(y_test)
-			steady_state_correct += (np.logical_and(y_pred==np.array(y_test), types_test == 1)).sum().item()
-			tot_steady_state += (types_test == 1).sum().item()
-			transitional_correct += (np.logical_and(y_pred==np.array(y_test), types_test == 0)).sum().item()
-			tot_transitional += (types_test == 0).sum().item()
+			correct = (y_pred==np.array(y_test)).sum().item()
+			tot = len(y_test)
+			steady_state_correct = (np.logical_and(y_pred==np.array(y_test), types_test == 1)).sum().item()
+			tot_steady_state = (types_test == 1).sum().item()
+			transitional_correct = (np.logical_and(y_pred==np.array(y_test), types_test == 0)).sum().item()
+			tot_transitional = (types_test == 0).sum().item()
 
 			tot_acc = correct/tot
 			ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"

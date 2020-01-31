@@ -92,7 +92,7 @@ class trainclass():
 	    print("Evaluation accuracy: {}".format(acc))
 	    print("Steady-state accuracy: {}".format(ss_acc))
 	    print("Transistional accuracy: {}".format(tr_acc))
-	    return acc
+	    return acc, ss_acc, tr_acc
 
 
 

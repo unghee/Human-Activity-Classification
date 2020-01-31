@@ -38,8 +38,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	LEARNING_RATE = 1e-5
 	WEIGHT_DECAY = 1e-3
 	NUMB_CLASS = 5
-	NUB_EPOCH= 3
-	numfolds = 3
+	NUB_EPOCH= 200
+	numfolds = 10
 	DATA_LOAD_BOOL = True
 
 	SAVING_BOOL = True
@@ -81,8 +81,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
-	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
-	BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 10),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 51),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
 
 	INPUT_NUM=BIO_train.input_numb
 	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=16,hop_length=27,model_type='CNN')
@@ -115,6 +115,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		types = dtype
 
 	accuracies =[]
+	ss_accuracies=[]
+	tr_accuracies=[]
 
 
 	skf = KFold(n_splits = numfolds, shuffle = True)
@@ -144,18 +146,37 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		model.load_state_dict(torch.load(MODEL_NAME))
 
 		# print("Evaluate on test set")
-		accs=train_class.evaluate(testloader)
+		accs,ss_accs,tr_accs=train_class.evaluate(testloader)
 		accuracies.append(accs)
+		ss_accuracies.append(ss_accs)
+		tr_accuracies.append(tr_accs)
 
 		i +=1
 
 	print('saved on the results')
 
 
+	# with open(RESULT_NAME, 'w') as f:
+	# 	for item in accuracies:
+	# 		f.write("%s\n" % item)
+	# f.close()
+
+
+	print('writing...')
 	with open(RESULT_NAME, 'w') as f:
+		f.write('total ')
 		for item in accuracies:
-			f.write("%s\n" % item)
+			f.write("%s " % item)
+		f.write('\n')
+		f.write('steadystate ')
+		for item in ss_accuracies:
+			f.write("%s " % item)
+		f.write('\n')
+		f.write('transitional ')
+		for item in tr_accuracies:
+			f.write("%s " % item)
 	f.close()
+
 
 classifiers=['CNN']
 sensors=["imu","emg","goin"]
