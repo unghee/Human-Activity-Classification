@@ -83,23 +83,25 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	print("Loading datasets...")
 
 	BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
-	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 51),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 51),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 
-	INPUT_NUM=BIO_train.input_numb
-	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=16,hop_length=27,model_type='CNN')
-	# with open('BIO_train_melspectro_500s_bands_16_hop_length_27.pkl', 'rb') as input:
-	#     BIO_train = pickle.load(input)
+	
+
 
 	if SAVING_BOOL:
 		save_object(BIO_train,SAVE_NAME)
 
+	# with open(SAVE_NAME, 'rb') as input:
+	#     BIO_train = pickle.load(input)
+
+	INPUT_NUM=BIO_train.input_numb
 
 	wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
 
 	device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 	print('GPU USED?',torch.cuda.is_available())
-	model = Network(INPUT_NUM,NUMB_CLASS)
+	model = Network_modespecific(INPUT_NUM,NUMB_CLASS)
 	model = model.to(device)
 
 	criterion = nn.CrossEntropyLoss()
@@ -109,12 +111,13 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	init_state = copy.deepcopy(model.state_dict())
 	init_state_opt = copy.deepcopy(optimizer.state_dict())
 
+	one_hot_embed= torch.eye(5)
 
-	for batch, label, dtype, onehots  in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
+	for batch, label, dtype, prevlabels  in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
 		X = batch
 		y = label
 		types = dtype
-		onehot = onehots
+		prevlabel = prevlabels
 
 	accuracies =[]
 	ss_accuracies=[]
@@ -127,7 +130,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	train_class=trainclass(model,optimizer,DATA_LOAD_BOOL,device,criterion,MODEL_NAME)
 
-	for train_index, test_index in skf.split(X, y, types, onehot):
+	for train_index, test_index in skf.split(X, y):
 
 		model.load_state_dict(init_state)
 		optimizer.load_state_dict(init_state_opt)
@@ -135,7 +138,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		X_train, X_test = X[train_index], X[test_index]
 		y_train, y_test = y[train_index], y[test_index]
 		types_train, types_test = types[train_index], types[test_index]
-		onehot_train, onehot_test = onehot[train_index], onehot[test_index]
+		onehot_train, onehot_test = one_hot_embed[prevlabel[train_index]], one_hot_embed[prevlabel[test_index]]
+
 
 		train_dataset = TensorDataset( X_train, y_train, types_train,onehot_train)
 		test_dataset = TensorDataset( X_test, y_test, types_test,onehot_test)
@@ -144,7 +148,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
 		print("######################Fold:{}#####################3".format(i+1))
-		train_class.train_modesp(trainloader,num_epoch,onehot=onehot_train)
+		train_class.train_modesp(trainloader,num_epoch)
 
 		model.load_state_dict(torch.load(MODEL_NAME))
 
@@ -183,9 +187,10 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 classifiers=['CNN']
 sensors=["imu","emg","goin"]
-modes = ['bilateral','ipsilateral','contralateral']
+# modes = ['bilateral','ipsilateral','contralateral']
+modes = ['bilateral']
 for classifier in classifiers:
-	for i in range(1,4):
+	for i in range(3,4):
 		for combo in combinations(sensors,i):
 			sensor = [item for item in combo]
 			for mode in modes:

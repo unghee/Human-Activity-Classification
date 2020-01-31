@@ -37,7 +37,8 @@ class EnableDataset(Dataset):
             self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
             self.transform = transform
             self.input_numb = 0
-            one_hot_embed= torch.eye(5)
+            self.mode_specific=mode_specific
+
             exclude_list = [
                 # 'AB194_Circuit_009',
                 # 'AB194_Circuit_017',
@@ -142,9 +143,8 @@ class EnableDataset(Dataset):
                             data = np.array(data)
                             self.input_numb=np.shape(data)[1]
                             img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)
-                            if mode_specific:
-                                onehot = one_hot_embed[int(self.prev_label[idx])]
-                                self.dataset.append((img,labels[idx],timestep_type[idx],onehot))
+                            if self.mode_specific:
+                                self.dataset.append((img,labels[idx],timestep_type[idx],int(self.prev_label[idx])))
                             else:
                                 self.dataset.append((img,labels[idx], timestep_type[idx]))
         else:
@@ -236,12 +236,22 @@ class EnableDataset(Dataset):
 
     def __getitem__(self, index):
         if self.model_type == "CNN":
-            img, label, timestep_type = self.dataset[index]
-            if self.transform:
-                img = F.to_pil_image(np.uint8(img))
-                img = self.transform(img)
-                img = np.array(img)
-            return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type
+            if self.mode_specific:
+                img, label, timestep_type, prev__label= self.dataset[index]
+                if self.transform:
+                    img = F.to_pil_image(np.uint8(img))
+                    img = self.transform(img)
+                    img = np.array(img)
+                    pdb.set_trace()
+                return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type, prev__label
+
+            else:
+                img, label, timestep_type = self.dataset[index]
+                if self.transform:
+                    img = F.to_pil_image(np.uint8(img))
+                    img = self.transform(img)
+                    img = np.array(img)
+                return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type
         else:
             img, label, timestep_type = self.dataset[index]
             return img, np.array(label), timestep_type
