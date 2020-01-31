@@ -28,7 +28,7 @@ class EnableDataset(Dataset):
     window_size: how many samples to consider for a label
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN", data_range=(1, 10), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
+    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN",mode_specific=False, data_range=(1, 10), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
         self.model_type = model_type
         if self.model_type == "CNN":
             print("    range: [%d, %d)" % (data_range[0], data_range[1]))
@@ -37,6 +37,7 @@ class EnableDataset(Dataset):
             self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
             self.transform = transform
             self.input_numb = 0
+            one_hot_embed= torch.eye(5)
             exclude_list = [
                 # 'AB194_Circuit_009',
                 # 'AB194_Circuit_017',
@@ -141,7 +142,11 @@ class EnableDataset(Dataset):
                             data = np.array(data)
                             self.input_numb=np.shape(data)[1]
                             img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)
-                            self.dataset.append((img,labels[idx], timestep_type[idx]))
+                            if mode_specific:
+                                onehot = one_hot_embed[int(self.prev_label[idx])]
+                                self.dataset.append((img,labels[idx],timestep_type[idx],onehot))
+                            else:
+                                self.dataset.append((img,labels[idx], timestep_type[idx]))
         else:
             self.dataset = []
             self.prev_label = np.array([], dtype=np.int64)

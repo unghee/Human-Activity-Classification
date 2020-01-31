@@ -30,7 +30,7 @@ class trainclass():
 		self.model_name= model_name
 
 
-	def train(self, loader,num_epoch = 20): # Train the model
+	def train(self, loader,num_epoch = 20,onehot=None): # Train the model
 	    loss_history=[]
 	    val_history=[]
 	    print("Start training...")
@@ -60,7 +60,36 @@ class trainclass():
 	    print("Done!")
 	    return loss_history, val_history
 
+	def train_modesp(self, loader,num_epoch = 20): # Train the model
+	    loss_history=[]
+	    val_history=[]
+	    print("Start training...")
+	    self.model.train()
+	    pre_loss=10000
+	    for i in range(num_epoch):
+	        running_loss = []
+	        for batch, label, types, onehot in tqdm(loader,disable=self.data_bool):
+	            batch = batch.to(self.device)
+	            label = label.to(self.device)
+	            onehot = onehot.to(self.device)
+	            label = label -1 # indexing start from 1 (removing sitting conditon)
+	            self.optimizer.zero_grad()
+	            pred = self.model(batch,onehot)
+	            loss = self.criterion(pred, label)
+	            running_loss.append(loss.item())
+	            loss.backward()
+	            self.optimizer.step()
 
+	        loss_mean= np.mean(running_loss)
+	        loss_history.append(loss_mean)
+	        val_acc =0
+	        if loss_mean< pre_loss:
+	        	pre_loss = loss_mean
+	        	torch.save(self.model.state_dict(), self.model_name)
+	        	print("*model saved*")
+	        print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss),val_acc))
+	    print("Done!")
+	    return loss_history, val_history
 
 	def evaluate(self,loader):
 	    self.model.eval()
@@ -95,7 +124,38 @@ class trainclass():
 	    return acc, ss_acc, tr_acc
 
 
+	def evaluate_modesp(self,loader):
+	    self.model.eval()
+	    correct = 0
+	    steady_state_correct = 0
+	    tot_steady_state = 0
+	    transitional_correct = 0
+	    tot_transitional = 0
+	    with torch.no_grad():
+	        count = 0
+	        totalloss = 0
+	        for batch, label, types, onehot in tqdm(loader,disable=self.data_bool):
+	            batch = batch.to(self.device)
+	            label = label-1 # indexing start from 1 (removing sitting conditon)
+	            label = label.to(self.device)
+	            onehot = onehot.to(self.device)
+	            pred = self.model(batch,onehot)
+	            totalloss += self.criterion(pred, label)
+	            count +=1
+	            correct += (torch.argmax(pred,dim=1)==label).sum().item()
+	            steady_state_correct += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), types == 1)).sum().item()
+	            tot_steady_state += (types == 1).sum().item()
+	            transitional_correct += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), types == 0)).sum().item()
+	            tot_transitional += (types == 0).sum().item()
+	    acc = correct/len(loader.dataset)
 
+	    ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
+	    tr_acc = transitional_correct/tot_transitional if tot_transitional != 0 else "No transitional samples used"
+	    print("Evaluation loss: {}".format(totalloss/count))
+	    print("Evaluation accuracy: {}".format(acc))
+	    print("Steady-state accuracy: {}".format(ss_acc))
+	    print("Transistional accuracy: {}".format(tr_acc))
+	    return acc, ss_acc, tr_acc
 
 def save_object(obj, filename):
     with open(filename, 'wb') as output:  # Overwrites any existing file.
