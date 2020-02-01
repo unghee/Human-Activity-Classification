@@ -76,7 +76,7 @@ class EnableDataset(Dataset):
             for subjects in subject_list:
                 for i in range(data_range[0], data_range[1]):
                     filename = dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i
-                    if not os.path.exists(filename) or ('AB' + subjects+ '_Circuit_%03d_post'% i) in exclude_list:
+                    if not os.path.exists(filename) or ('AB' + subjects+ '_Circuit_%03d'% i) in exclude_list:
                         print(filename, 'not found or excluded')
                         continue
                     raw_data = pd.read_csv(filename)
