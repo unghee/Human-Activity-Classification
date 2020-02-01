@@ -46,6 +46,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	MODE_SPECIFIC_BOOL= True
 	############################################
 
+	print('Number of folds: ', numfolds)
 
 
 	MODE = mode
@@ -82,17 +83,17 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
-	BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
+	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 51),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 
 	
 
 
-	if SAVING_BOOL:
-		save_object(BIO_train,SAVE_NAME)
+	# if SAVING_BOOL:
+	# 	save_object(BIO_train,SAVE_NAME)
 
-	# with open(SAVE_NAME, 'rb') as input:
-	#     BIO_train = pickle.load(input)
+	with open(SAVE_NAME, 'rb') as input:
+	    BIO_train = pickle.load(input)
 
 	INPUT_NUM=BIO_train.input_numb
 
