@@ -8,6 +8,7 @@ from torch import optim
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset
+import torchvision.models as models
 
 from dataset import EnableDataset
 
@@ -30,7 +31,7 @@ from networks import *
 from itertools import combinations
 
 
-def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]):
+def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"],NN_model = None):
 
 	########## SETTINGS  ########################
 
@@ -42,8 +43,11 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	numfolds = 10
 	DATA_LOAD_BOOL = True
 
-	SAVING_BOOL = True
+	SAVING_BOOL = False
 	MODE_SPECIFIC_BOOL= True
+
+	BAND=10
+	HOP=10
 	############################################
 
 	print('Number of folds: ', numfolds)
@@ -56,15 +60,15 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 
 	MODEL_NAME = './models/Freq-Encoding/bestmodel'+ \
-	        		'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'.pth'
+	        		'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pth'
 
 	# RESULT_NAME= './results/Freq-Encoding/accuracy'+ \
 	        		# '_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'.txt'
 
 
-	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_accuracy.txt'
+	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_accuracy.txt'
 
-	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'.pkl'
+	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'mode_secific'+'.pkl'
 
 	if not os.path.exists('./models/Freq-Encoding'):
 		os.makedirs('./models/Freq-Encoding')
@@ -83,17 +87,16 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
-	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
-	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 51),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
+	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 
-	
+	BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 8),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 
 
-	# if SAVING_BOOL:
-	# 	save_object(BIO_train,SAVE_NAME)
+	if SAVING_BOOL:
+		save_object(BIO_train,SAVE_NAME)
 
-	with open(SAVE_NAME, 'rb') as input:
-	    BIO_train = pickle.load(input)
+	# with open(SAVE_NAME, 'rb') as input:
+	#     BIO_train = pickle.load(input)
 
 	INPUT_NUM=BIO_train.input_numb
 
@@ -102,7 +105,33 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 	print('GPU USED?',torch.cuda.is_available())
-	model = Network_modespecific(INPUT_NUM,NUMB_CLASS)
+
+	if NN_model == 'RESNET18':
+		model = MyResNet18() # use resnet
+		# num_ftrs = model.fc.in_features
+		# model.conv1 = nn.Conv2d(num_input_channel, 64, kernel_size=7, stride=2, padding=3,bias=False)
+		model.conv1 = nn.Conv2d(INPUT_NUM, 64, kernel_size=5, stride=1, padding=2)
+		# top_layer= nn.Conv2d(INPUT_NUM, 3, kernel_size=5, stride=1, padding=2)
+		# model = nn.Sequential(top_layer,model)
+		# model.fc = nn.Linear(num_ftrs, NUMB_CLASS)
+		model.fc = nn.Linear(517 ,NUMB_CLASS)
+
+		# model.load_state_dict(models.resnet18(pretrained=True).state_dict())
+		pretrained_dict = models.resnet18(pretrained=True).state_dict()
+		model_dict = model.state_dict()
+
+		# 1. filter out unnecessary keys
+		pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+		# pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+		# 2. overwrite entries in the existing state dict
+		model_dict.update(pretrained_dict) 
+		# 3. load the new state dict
+		model.load_state_dict(pretrained_dict)
+
+
+
+	else:	
+		model = Network_modespecific(INPUT_NUM,NUMB_CLASS)
 	model = model.to(device)
 
 	criterion = nn.CrossEntropyLoss()
@@ -190,10 +219,11 @@ classifiers=['CNN']
 sensors=["imu","emg","goin"]
 # modes = ['bilateral','ipsilateral','contralateral']
 modes = ['bilateral']
+NNMODEL = 'RESNET18'
 for classifier in classifiers:
 	for i in range(3,4):
 		for combo in combinations(sensors,i):
 			sensor = [item for item in combo]
 			for mode in modes:
 				print(classifier, sensor, mode)
-				run_classifier(mode=mode,classifier=classifier,sensor=sensor)
+				run_classifier(mode=mode,classifier=classifier,sensor=sensor,NN_model = NNMODEL)

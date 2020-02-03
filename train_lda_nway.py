@@ -25,11 +25,15 @@ from utils import *
 MODE = 'bilateral'
 CLASSIFIER = 'SVM'
 SAVING_BOOL = True
-
+sensor=["imu","emg","goin"]
 
 
 ############################
-RESULT_NAME= './results/mode_specific/'+CLASSIFIER+'_accuracy_nway_NEW.txt'
+
+SENSOR = sensor
+sensor_str='_'.join(SENSOR)
+
+RESULT_NAME= './results/mode_specific/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_accuracy_nway_NEW.txt'
 
 
 SAVE_NAME= './checkpoints/mode_specfic.pkl'
@@ -53,7 +57,7 @@ BIO_trains_len=0
 k = 0
 for i in range(1,len_class+1):
 	for j in range(1,len_phase+1):
-		BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],phaselabel=j,prevlabel=i,model_type='LDA'))
+		BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],phaselabel=j,prevlabel=i,model_type='LDA',sensors=SENSOR,mode=MODE))
 		# BIO_trains_len += len(BIO_trains[k])
 		k +=1
 

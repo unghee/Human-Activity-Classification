@@ -28,7 +28,7 @@ class EnableDataset(Dataset):
     window_size: how many samples to consider for a label
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN",mode_specific=False, data_range=(1, 10), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
+    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN",mode_specific=False, data_range=(1, 51), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
         self.model_type = model_type
         if self.model_type == "CNN":
             print("    range: [%d, %d)" % (data_range[0], data_range[1]))
@@ -165,6 +165,7 @@ class EnableDataset(Dataset):
 
 
                     # while not pd.isnull(raw_data.loc[index,'Trigger']):
+                    # pdb.set_trace()
                     for index in range(0,raw_data.shape[0]):
                         trigger = raw_data.loc[index,'Trigger']
                         trigger=str(int(trigger))
@@ -204,7 +205,7 @@ class EnableDataset(Dataset):
                                 triggers.append(trigger) # triggers can be used to compare translational and steady-state error
 
                                 label = float(trigger[2])
-                                if float(trigger[2]) == 6:
+                                if float(trigger[2]) == 0 or float(trigger[0])== 0 :
                                     print('***********',trigger[2])
 
                                 data = raw_data.loc[index, :'Contra RF AR6']
@@ -228,6 +229,7 @@ class EnableDataset(Dataset):
 
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
+                    pdb.set_trace()
         print("load dataset done")
 
 

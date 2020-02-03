@@ -14,6 +14,7 @@ from dataset import EnableDataset
 import pickle
 
 from sklearn.model_selection import KFold, StratifiedKFold,ShuffleSplit ,train_test_split
+from sklearn.metrics import confusion_matrix
 
 import copy
 import os
@@ -30,7 +31,7 @@ from networks import *
 from itertools import combinations
 
 
-def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]):
+def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"],NN_model=None):
 
 	########## SETTINGS  ########################
 
@@ -41,8 +42,10 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	NUB_EPOCH= 200
 	numfolds = 10
 	DATA_LOAD_BOOL = True
-
-	SAVING_BOOL = True
+	BAND=10
+	HOP=10
+	# BAND=16,HOP=27
+	SAVING_BOOL = False
 	############################################
 
 
@@ -54,15 +57,15 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 
 	MODEL_NAME = './models/Freq-Encoding/bestmodel'+ \
-	        		'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'.pth'
+	        		'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pth'
 
 	# RESULT_NAME= './results/Freq-Encoding/accuracy'+ \
 	        		# '_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'.txt'
 
 
-	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_accuracy.txt'
+	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + NN_model+'_'+MODE+'_'+sensor_str+'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_accuracy.txt'
 
-	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'.pkl'
+	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER +'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pkl'
 
 	if not os.path.exists('./models/Freq-Encoding'):
 		os.makedirs('./models/Freq-Encoding')
@@ -81,24 +84,33 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
-	BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
 	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 51),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
 
+	# if SAVING_BOOL:
+	# 	save_object(BIO_train,SAVE_NAME)
+
+	with open(SAVE_NAME, 'rb') as input:
+	    BIO_train = pickle.load(input)
+
 	INPUT_NUM=BIO_train.input_numb
-	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=16,hop_length=27,model_type='CNN')
-	# with open('BIO_train_melspectro_500s_bands_16_hop_length_27.pkl', 'rb') as input:
-	#     BIO_train = pickle.load(input)
-
-	if SAVING_BOOL:
-		save_object(BIO_train,SAVE_NAME)
-
 
 	wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
 
 	device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 	print('GPU USED?',torch.cuda.is_available())
-	model = Network(INPUT_NUM,NUMB_CLASS)
+
+	if NN_model == 'RESNET18':
+		model = torch.hub.load('pytorch/vision:v0.4.2', 'resnet18', pretrained=True) # use resnet
+		num_ftrs = model.fc.in_features
+		# model.conv1 = nn.Conv2d(num_input_channel, 64, kernel_size=7, stride=2, padding=3,bias=False)
+		top_layer= nn.Conv2d(INPUT_NUM, 3, kernel_size=5, stride=1, padding=2)
+		model = nn.Sequential(top_layer,model)
+		model.fc = nn.Linear(num_ftrs, NUMB_CLASS)
+
+	else:	
+		model = Network(INPUT_NUM,NUMB_CLASS)
 	model = model.to(device)
 
 	criterion = nn.CrossEntropyLoss()
@@ -125,6 +137,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	train_class=trainclass(model,optimizer,DATA_LOAD_BOOL,device,criterion,MODEL_NAME)
 
+	tests=[]
+	preds=[]
 	for train_index, test_index in skf.split(X, y, types):
 
 		model.load_state_dict(init_state)
@@ -140,16 +154,19 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 		testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
-		print("######################Fold:{}#####################3".format(i+1))
+		print("######################Fold:{}#####################".format(i+1))
 		train_class.train(trainloader,num_epoch)
 
 		model.load_state_dict(torch.load(MODEL_NAME))
 
 		# print("Evaluate on test set")
-		accs,ss_accs,tr_accs=train_class.evaluate(testloader)
+		accs,ss_accs,tr_accs,pred,test=train_class.evaluate(testloader)
 		accuracies.append(accs)
 		ss_accuracies.append(ss_accs)
 		tr_accuracies.append(tr_accs)
+
+		preds.extend(pred)
+		tests.extend(test)
 
 		i +=1
 
@@ -178,13 +195,36 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	f.close()
 
 
+	conf= confusion_matrix(tests, preds)
+	print(conf)
+
+	return conf
+
+
+
 classifiers=['CNN']
 sensors=["imu","emg","goin"]
-modes = ['bilateral','ipsilateral','contralateral']
+sensor_str='_'.join(sensors)
+# modes = ['bilateral','ipsilateral','contralateral']
+modes = ['bilateral']
+# NN= 'RESNET'
+NN = 'bionet'
 for classifier in classifiers:
-	for i in range(1,4):
+	for i in range(3,4):
 		for combo in combinations(sensors,i):
 			sensor = [item for item in combo]
 			for mode in modes:
 				print(classifier, sensor, mode)
-				run_classifier(mode=mode,classifier=classifier,sensor=sensor)
+				confusion=run_classifier(mode=mode,classifier=classifier,sensor=sensor,NN_model=NN)
+
+with open('./results/'+classifiers+'_'+sensor_str+'_'+modes+'_'+'confusion.txt', 'w') as f:
+	for items in confusion:
+		for item in items:
+			f.write("%s " % item)
+
+		f.write('\n')
+f.close()
+
+
+
+

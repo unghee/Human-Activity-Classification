@@ -18,7 +18,7 @@ from sklearn.model_selection import KFold, StratifiedKFold,ShuffleSplit ,train_t
 import copy
 import os
 import random
-
+import pdb
 
 class trainclass():
 	def __init__(self,model,optimizer,databool,device,criterion,model_name):
@@ -75,6 +75,7 @@ class trainclass():
 	            label = label -1 # indexing start from 1 (removing sitting conditon)
 	            self.optimizer.zero_grad()
 	            pred = self.model(batch,onehot)
+	            # pred = self.model([batch,onehot]) # For mode-specific resnet
 	            loss = self.criterion(pred, label)
 	            running_loss.append(loss.item())
 	            loss.backward()
@@ -98,6 +99,8 @@ class trainclass():
 	    tot_steady_state = 0
 	    transitional_correct = 0
 	    tot_transitional = 0
+	    preds=[]
+	    tests=[]
 	    with torch.no_grad():
 	        count = 0
 	        totalloss = 0
@@ -108,6 +111,9 @@ class trainclass():
 	            pred = self.model(batch)
 	            totalloss += self.criterion(pred, label)
 	            count +=1
+	            preds.extend((torch.argmax(pred,dim=1)).tolist())
+	            tests.extend(label.tolist())
+
 	            correct += (torch.argmax(pred,dim=1)==label).sum().item()
 	            steady_state_correct += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), types == 1)).sum().item()
 	            tot_steady_state += (types == 1).sum().item()
@@ -121,7 +127,7 @@ class trainclass():
 	    print("Evaluation accuracy: {}".format(acc))
 	    print("Steady-state accuracy: {}".format(ss_acc))
 	    print("Transistional accuracy: {}".format(tr_acc))
-	    return acc, ss_acc, tr_acc
+	    return acc, ss_acc, tr_acc, preds, tests
 
 
 	def evaluate_modesp(self,loader):
@@ -155,7 +161,7 @@ class trainclass():
 	    print("Evaluation accuracy: {}".format(acc))
 	    print("Steady-state accuracy: {}".format(ss_acc))
 	    print("Transistional accuracy: {}".format(tr_acc))
-	    return acc, ss_acc, tr_acc
+	    return acc, ss_acc, tr_acc, corr
 
 def save_object(obj, filename):
     with open(filename, 'wb') as output:  # Overwrites any existing file.
