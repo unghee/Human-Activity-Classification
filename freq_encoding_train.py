@@ -14,6 +14,7 @@ from dataset import EnableDataset
 import pickle
 
 from sklearn.model_selection import KFold, StratifiedKFold,ShuffleSplit ,train_test_split
+from PIL import Image
 
 import copy
 import os
@@ -28,6 +29,23 @@ from networks import *
 
 
 from itertools import combinations
+
+# Used to add a hook to our model. The hook is a function that will run
+# during our model execution.
+class SaveFeatures():
+	features=None
+	def __init__(self, m): self.hook = m.register_forward_hook(self.hook_fn)
+
+	def hook_fn(self, module, input, output):
+		self.features = ((output.cpu()).data).numpy()
+
+	def remove(self):
+		self.hook.remove()
+	# Save the first channel the activation map
+	def plot_activation(self, filename):
+		img = Image.fromarray(self.features[0,1], 'L')
+		img.save(filename + '.png')
+
 
 
 def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]):
@@ -151,6 +169,26 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	print('saved on the results')
 
+
+	# This is to see the activation map for the two conv layers:
+	conv1 = model._modules.get('sclayer1') # Get the layers we want to hook
+	conv2 = model._modules.get('sclayer2')
+
+	act_map1 = SaveFeatures(conv1) # Setup hook, data storage
+	act_map2 = SaveFeatures(conv2)
+
+	prediction = model(BIO_train[0][0].unsqueeze(0)) # Make a prediction
+	pred_probabilities = F.softmax(prediction).data.squeeze()
+	act_map1.remove() # Unhook
+	act_map2.remove() # Unhook
+
+	# Save activations
+	act_map1.plot_activation("conv1_activation")
+	act_map1.plot_activation("conv2_activation")
+
+	# Save one channel from the first datum in the dataset
+	img = Image.fromarray(BIO_train[0][0].numpy()[0], 'L')
+	img.save("input.png")
 
 	with open(RESULT_NAME, 'w') as f:
 		for item in accuracies:
