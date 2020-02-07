@@ -56,8 +56,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	LEARNING_RATE = 1e-5
 	WEIGHT_DECAY = 1e-3
 	NUMB_CLASS = 5
-	NUB_EPOCH= 3
-	numfolds = 3
+	NUB_EPOCH= 200
+	numfolds = 10
 	DATA_LOAD_BOOL = True
 
 	SAVING_BOOL = True
@@ -100,7 +100,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	print("Loading datasets...")
 
 	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
-	BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 10),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
 
 	INPUT_NUM=BIO_train.input_numb
 	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=16,hop_length=27,model_type='CNN')
@@ -133,7 +133,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		types = dtype
 
 	accuracies =[]
-
+	class_accs = [0] * NUMB_CLASS
 
 	skf = KFold(n_splits = numfolds, shuffle = True)
 	i = 0
@@ -162,13 +162,21 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		model.load_state_dict(torch.load(MODEL_NAME))
 
 		# print("Evaluate on test set")
-		accs=train_class.evaluate(testloader)
+		accs, class_acc =train_class.evaluate(testloader)
 		accuracies.append(accs)
+		for i in range(len(class_accs)):
+			class_accs[i] += class_acc[i]
+
 
 		i +=1
 
 	print('saved on the results')
-
+	print("average:")
+	for i in range(len(class_accs)):
+		if class_accs[i] == 0:
+			print("Class {} has no samples".format(i))
+		else:
+			print("Class {} accuracy: {}".format(i, class_accs[i]/numfolds))
 
 	# This is to see the activation map for the two conv layers:
 	conv1 = model._modules.get('sclayer1') # Get the layers we want to hook
@@ -195,13 +203,17 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 			f.write("%s\n" % item)
 	f.close()
 
-classifiers=['CNN']
+# Code for the different subgroups
+# classifiers=['CNN']
 sensors=["imu","emg","goin"]
-modes = ['bilateral','ipsilateral','contralateral']
-for classifier in classifiers:
-	for i in range(1,4):
-		for combo in combinations(sensors,i):
-			sensor = [item for item in combo]
-			for mode in modes:
-				print(classifier, sensor, mode)
-				run_classifier(mode=mode,classifier=classifier,sensor=sensor)
+# modes = ['bilateral', 'ipsilateral', 'contralateral']
+# for classifier in classifiers:
+# 	for i in range(1,4):
+# 		for combo in combinations(sensors,i):
+# 			sensor = [item for item in combo]
+# 			for mode in modes:
+# 				print(classifier, sensor, mode)
+# 				run_classifier(mode=mode,classifier=classifier,sensor=sensor)
+
+# A test using all the data
+run_classifier(mode='bilateral',classifier='CNN',sensor=sensors)
