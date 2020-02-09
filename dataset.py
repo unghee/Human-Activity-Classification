@@ -139,7 +139,7 @@ class EnableDataset(Dataset):
                                 regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
                             regex += ")"
                             data = data.filter(regex=regex, axis=1)
-    
+
                             data = np.array(data)
                             self.input_numb=np.shape(data)[1]
                             img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)

@@ -79,58 +79,35 @@ y_base_ss_mode = 100-100;
 y_base_tr_mode = 100-0;
 
 
-y_overall = [  mean(LDA_bilateral.overall); mean(SVM_bilateral.overall); mean(CNN_bilateral.overall);]
-stds_overall = [ std(LDA_bilateral.overall) ; std(SVM_bilateral.overall); std(CNN_bilateral.overall)]
+y_overall = [ y_base_overall; mean(LDA_bilateral.overall); mean(SVM_bilateral.overall); mean(CNN_bilateral.overall);]
+stds_overall = [0; std(LDA_bilateral.overall) ; std(SVM_bilateral.overall); std(CNN_bilateral.overall)]
 
-y_ss = [  mean(LDA_bilateral.steadystate);  mean(SVM_bilateral.steadystate); mean(CNN_bilateral.steadystate)]
-stds_ss = [ std(LDA_bilateral.steadystate) ; std(SVM_bilateral.steadystate); std(CNN_bilateral.steadystate)]
+y_ss = [ y_base_ss; mean(LDA_bilateral.steadystate);  mean(SVM_bilateral.steadystate); mean(CNN_bilateral.steadystate)]
+stds_ss = [0; std(LDA_bilateral.overall) ; std(SVM_bilateral.overall); std(CNN_bilateral.steadystate)]
 
-y_tr = [ mean(LDA_bilateral.transitional);  mean(SVM_bilateral.transitional); mean(CNN_bilateral.transitional)]
-stds_tr = [ std(LDA_bilateral.transitional) ; std(SVM_bilateral.transitional); std(CNN_bilateral.transitional)]
+y_tr = [ y_base_tr ;mean(LDA_bilateral.transitional);  mean(SVM_bilateral.transitional); mean(CNN_bilateral.transitional)]
+stds_tr = [0; std(LDA_bilateral.transitional) ; std(SVM_bilateral.transitional); std(CNN_bilateral.transitional)]
 
-y_overall_mode = [  mean(LDA_bilateral_mode.overall); mean(SVM_bilateral_mode.overall); mean(CNN_bilateral_mode.overall)]
-stds_overall_mode  = [ std(LDA_bilateral_mode.overall) ; std(SVM_bilateral_mode.overall); std(CNN_bilateral_mode.overall)]
+y_overall_mode = [ y_base_overall_mode; mean(LDA_bilateral_mode.overall); mean(SVM_bilateral_mode.overall); mean(CNN_bilateral_mode.overall)]
+stds_overall_mode  = [ 0;std(LDA_bilateral_mode.overall) ; std(SVM_bilateral_mode.overall); std(CNN_bilateral_mode.overall)]
 
-y_ss_mode  = [   mean(LDA_bilateral_mode.steadystate);  mean(SVM_bilateral_mode.steadystate); mean(CNN_bilateral_mode.steadystate)]
-stds_ss_mode  = [ std(LDA_bilateral_mode.steadystate) ; std(SVM_bilateral_mode.steadystate); std(CNN_bilateral_mode.steadystate)]
+y_ss_mode  = [  y_base_ss_mode; mean(LDA_bilateral_mode.steadystate);  mean(SVM_bilateral_mode.steadystate); mean(CNN_bilateral_mode.steadystate)]
+stds_ss_mode  = [ 0;std(LDA_bilateral_mode.overall) ; std(SVM_bilateral_mode.overall); std(CNN_bilateral_mode.steadystate)]
 
-y_tr_mode  = [  mean(LDA_bilateral_mode.transitional);  mean(SVM_bilateral_mode.transitional); mean(CNN_bilateral_mode.transitional) ]
-stds_tr_mode  = [ std(LDA_bilateral.transitional) ; std(SVM_bilateral_mode.transitional); std(CNN_bilateral_mode.transitional)]
+y_tr_mode  = [ y_base_tr_mode; mean(LDA_bilateral_mode.transitional);  mean(SVM_bilateral_mode.transitional); mean(CNN_bilateral_mode.transitional) ]
+stds_tr_mode  = [ 0;std(LDA_bilateral.transitional) ; std(SVM_bilateral_mode.transitional); std(CNN_bilateral_mode.transitional)]
 
 
 
 %%
 
 
-classfiers_overall = [ LDA_bilateral.overall' SVM_bilateral.overall' CNN_bilateral.overall'];
-classfiers_steadystate = [ LDA_bilateral.steadystate' SVM_bilateral.steadystate' CNN_bilateral.steadystate'];
-classfiers_transitional = [ LDA_bilateral.transitional' SVM_bilateral.transitional' CNN_bilateral.transitional'];
+classfiers_cat = [CNN_bilateral.overall' LDA_bilateral.overall' SVM_bilateral.overall'];
 
-classfiers_mode_overall = [ LDA_bilateral_mode.overall' SVM_bilateral_mode.overall' CNN_bilateral_mode.overall'];
-classfiers_mode_steadystate = [ LDA_bilateral_mode.steadystate' SVM_bilateral_mode.steadystate' CNN_bilateral_mode.steadystate'];
-classfiers_mode_transitional = [ LDA_bilateral_mode.transitional' SVM_bilateral_mode.transitional' CNN_bilateral_mode.transitional'];
+[~,~,stats] = anova1(classfiers_cat);
 
-
-[~,~,stats_overall] = anova1(classfiers_overall);
-[c,~,~,gnames] = multcompare(stats_overall)
-[~,~,stats_steadystate] = anova1(classfiers_steadystate);
-[c,~,~,gnames] = multcompare(stats_steadystate)
-[~,~,stats_transitional] = anova1(classfiers_transitional);
-[c,~,~,gnames] = multcompare(stats_transitional)
-
-
-[~,~,stats_mode_overall] = anova1(classfiers_mode_overall);
-[c,~,~,gnames] = multcompare(stats_mode_overall)
-[~,~,stats_mode_steadystate] = anova1(classfiers_mode_steadystate);
-[c,~,~,gnames] = multcompare(stats_mode_steadystate)
-[~,~,stats_mode_transitional] = anova1(classfiers_mode_transitional);
-[c,~,~,gnames] = multcompare(stats_mode_transitional)
-
-% [c,~,~,gnames] = multcompare(stats,'CType','bonferroni') % larger
-% confidence interval
-
-
-
+[c,~,~,gnames] = multcompare(stats);
+% [gnames(c(:,1)), gnames(c(:,1)), num2cell(c(:,3:6))]
 %%
 close all
 
@@ -141,26 +118,27 @@ color_1 = [ 0, 36.5, 36.5]/100;
 color_2 = [0, 46.3, 46.3]/100;
 color_3 = [ 14.1, 62.4, 62.4]/100;
 
-NAME = {'LDA', 'SVM', 'CNN'};
+NAME = {'Base', 'LDA', 'SVM', 'CNN'};
 
 
 % ylimit=20;
 %%%
 
+%  set(gcf, 'Position',  [100, 100, 600, 800])
 
 fh3=figure
-
-set(gcf, 'Position',  [100, 100, 600, 1000])
 sb1=subplot(3,2,1)
 
 h=bar(diag(y_overall),ratio,'stacked','LineWidth',1.5);
 
 h(1).FaceColor =color_1;
 h(1).EdgeColor =color_1;
-h(2).FaceColor =color_2;
-h(2).EdgeColor =color_2;
-h(3).FaceColor =color_3;
-h(3).EdgeColor =color_3;
+h(2).FaceColor =color_1;
+h(2).EdgeColor =color_1;
+h(3).FaceColor =color_1;
+h(3).EdgeColor =color_1;
+h(4).FaceColor =color_3;
+h(4).EdgeColor =color_3;
 
 
 hold on
@@ -171,15 +149,22 @@ er.LineStyle = 'none';
 er.LineWidth = 2.5;
 ylabel('Overall Error (%)')
 
+plot(xlim,[min(y_overall) min(y_overall)], '--','LineWidth',line_width,'Color',[0.75 0.75 0.75])
+
+
+
 legend('off')
 box off
 names = NAME;
 set(gca, 'FontSize', 20,'Fontname','Times','xticklabel',names) 
-ylim([0 8])
-xlim([0 4])
+ylim([0 50])
+xlim([0 5])
+breakyaxis([8 45]);
+% break_axis();
 title('Non mode-specific')
 
-plot(xlim,[min(y_overall) min(y_overall)], '--','LineWidth',line_width,'Color',[0.75 0.75 0.75])
+ah1 = axes('Parent',fh3,'Units','normalized','Position',[0.1 0.1 25 0.8]);
+
 
 %%%
 subplot(3,2,3)
@@ -187,10 +172,12 @@ subplot(3,2,3)
 h2=bar(diag(y_ss),ratio,'stacked','LineWidth',1.5);
 h2(1).FaceColor =color_1;
 h2(1).EdgeColor =color_1;
-h2(2).FaceColor =color_2;
-h2(2).EdgeColor =color_2;
+h2(2).FaceColor =color_1;
+h2(2).EdgeColor =color_1;
 h2(3).FaceColor =color_3;
 h2(3).EdgeColor =color_3;
+
+
 
 hold on
 
@@ -199,17 +186,18 @@ er.Color = [0 0 0];
 er.LineStyle = 'none';  
 er.LineWidth = 2.5;
 
+plot(xlim,[min(y_ss) min(y_ss)], '--','LineWidth',line_width,'Color',[0.75 0.75 0.75])
+
+
 
 ylabel('Steady state Error (%)')
 legend('off')
 box off
 names = NAME;
 set(gca, 'FontSize', 20,'Fontname','Times','xticklabel',names) 
-ylim([0 4])
-xlim([0 4])
-
-plot(xlim,[min(y_ss) min(y_ss)], '--','LineWidth',line_width,'Color',[0.75 0.75 0.75])
-
+ylim([0 50])
+xlim([0 5])
+breakyaxis([8 45]);
 
 %%%
 subplot(3,2,5)
@@ -222,6 +210,8 @@ h(2).EdgeColor =color_2;
 h(3).FaceColor =color_3;
 h(3).EdgeColor =color_3;
 
+
+
 hold on
 
 er = errorbar(y_tr,stds_tr);    
@@ -231,15 +221,20 @@ er.LineWidth = 2.5;
 
 ylabel('Transitional Error (%)')
 
+
+plot(xlim,[min(y_tr) min(y_tr)], '--','LineWidth',line_width,'Color',[0.75 0.75 0.75])
+
+
 legend('off')
 box off
 names = NAME;
 set(gca, 'FontSize', 20,'Fontname','Times','xticklabel',names) 
-ylim([0 35])
-xlim([0 4])
+ylim([0 100])
+xlim([0 5])
+breakyaxis([60 80]);
 
-plot(xlim,[min(y_tr) min(y_tr)], '--','LineWidth',line_width,'Color',[0.75 0.75 0.75])
 
+%%% mode-specific
 
 %%%
 
@@ -254,6 +249,7 @@ h(3).FaceColor =color_3;
 h(3).EdgeColor =color_3;
 
 
+
 hold on
 
 er = errorbar(y_overall_mode,stds_overall_mode);    
@@ -261,17 +257,19 @@ er.Color = [0 0 0];
 er.LineStyle = 'none';  
 er.LineWidth = 2.5;
 % ylabel('Overall Error (%)')
+plot(xlim,[min(y_overall_mode) min(y_overall_mode)], '--','LineWidth',line_width,'Color',[0.75 0.75 0.75])
 
 legend('off')
 box off
 names = NAME;
 set(gca, 'FontSize', 20,'Fontname','Times','xticklabel',names) 
-ylim([0 8])
-xlim([0 4])
-
-plot(xlim,[min(y_overall_mode) min(y_overall_mode)], '--','LineWidth',line_width,'Color',[0.75 0.75 0.75])
+ylim([0 50])
+xlim([0 5])
+breakyaxis([8 15]);
 
 title('Mode-specific')
+
+
 
 
 %%%
@@ -293,17 +291,15 @@ er.Color = [0 0 0];
 er.LineStyle = 'none';  
 er.LineWidth = 2.5;
 
+plot(xlim,[min(y_ss_mode) min(y_ss_mode)], '--','LineWidth',line_width,'Color',[0.75 0.75 0.75])
+
+
 % ylabel('Steady state Error (%)')
 legend('off')
 box off
 names =NAME;
 set(gca, 'FontSize', 20,'Fontname','Times','xticklabel',names) 
 ylim([0 4])
-xlim([0 4])
-
-plot(xlim,[min(y_ss_mode) min(y_ss_mode)], '--','LineWidth',line_width,'Color',[0.75 0.75 0.75])
-
-
 %%%
 subplot(3,2,6)
 
@@ -322,11 +318,13 @@ er.Color = [0 0 0];
 er.LineStyle = 'none';  
 er.LineWidth = 2.5;
 
+% ylabel('Transitional Error (%)')
+
+plot(xlim,[min(y_tr_mode) min(y_tr_mode)], '--','LineWidth',line_width,'Color',[0.75 0.75 0.75])
+
 legend('off')
 box off
 names = NAME;
 set(gca, 'FontSize', 20,'Fontname','Times','xticklabel',names) 
 ylim([0 35])
-xlim([0 4])
 
-plot(xlim,[min(y_tr_mode) min(y_tr_mode)], '--','LineWidth',line_width,'Color',[0.75 0.75 0.75])

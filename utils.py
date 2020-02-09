@@ -101,6 +101,10 @@ class trainclass():
 	    tot_transitional = 0
 	    preds=[]
 	    tests=[]
+
+	    class_correct = [0]*6
+	    class_total = [0]*6
+
 	    with torch.no_grad():
 	        count = 0
 	        totalloss = 0
@@ -119,15 +123,24 @@ class trainclass():
 	            tot_steady_state += (types == 1).sum().item()
 	            transitional_correct += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), types == 0)).sum().item()
 	            tot_transitional += (types == 0).sum().item()
-	    acc = correct/len(loader.dataset)
 
+	            for i in range(len(class_correct)):
+	                class_correct[i] += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), label == i)).sum().item()
+	                class_total[i] += (label == i).sum().item()
+	    acc = correct/len(loader.dataset)
+	    for i in range(len(class_correct)):
+	    	if class_total[i] == 0:
+	    		print("Class {} has no samples".format(i))
+	    	else:
+	    		print("Class {} accuracy: {}".format(i, class_correct[i]/class_total[i]))
 	    ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
 	    tr_acc = transitional_correct/tot_transitional if tot_transitional != 0 else "No transitional samples used"
 	    print("Evaluation loss: {}".format(totalloss/count))
 	    print("Evaluation accuracy: {}".format(acc))
 	    print("Steady-state accuracy: {}".format(ss_acc))
 	    print("Transistional accuracy: {}".format(tr_acc))
-	    return acc, ss_acc, tr_acc, preds, tests
+
+	    return acc, ss_acc, tr_acc, preds, tests, class_correct
 
 
 	def evaluate_modesp(self,loader):
