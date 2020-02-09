@@ -8,16 +8,13 @@ from torch import optim
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset
+import torchvision.models as models
 
 from dataset import EnableDataset
 
 import pickle
 
 from sklearn.model_selection import KFold, StratifiedKFold,ShuffleSplit ,train_test_split
-from sklearn.metrics import confusion_matrix
-
-from PIL import Image
-
 
 import copy
 import os
@@ -33,25 +30,8 @@ from networks import *
 
 from itertools import combinations
 
-# Used to add a hook to our model. The hook is a function that will run
-# during our model execution.
-class SaveFeatures():
-	features=None
-	def __init__(self, m): self.hook = m.register_forward_hook(self.hook_fn)
 
-	def hook_fn(self, module, input, output):
-		self.features = ((output.cpu()).data).numpy()
-
-	def remove(self):
-		self.hook.remove()
-	# Save the first channel the activation map
-	def plot_activation(self, filename):
-		img = Image.fromarray(self.features[0,1], 'L')
-		img.save(filename + '.png')
-
-
-
-def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"],NN_model=None):
+def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"],NN_model = None):
 
 	########## SETTINGS  ########################
 
@@ -62,12 +42,15 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	NUB_EPOCH= 200
 	numfolds = 10
 	DATA_LOAD_BOOL = True
+
+	SAVING_BOOL = False
+	MODE_SPECIFIC_BOOL= True
+
 	BAND=10
 	HOP=10
-	# BAND=16,HOP=27
-	SAVING_BOOL = False
 	############################################
 
+	print('Number of folds: ', numfolds)
 
 
 	MODE = mode
@@ -83,9 +66,9 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	        		# '_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'.txt'
 
 
-	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + NN_model+'_'+MODE+'_'+sensor_str+'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_accuracy.txt'
+	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_accuracy.txt'
 
-	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER +'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pkl'
+	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'mode_secific'+'.pkl'
 
 	if not os.path.exists('./models/Freq-Encoding'):
 		os.makedirs('./models/Freq-Encoding')
@@ -104,14 +87,16 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
-	BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
+
+	BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 8),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 
 
-	# if SAVING_BOOL:
-	# 	save_object(BIO_train,SAVE_NAME)
+	if SAVING_BOOL:
+		save_object(BIO_train,SAVE_NAME)
 
-	with open(SAVE_NAME, 'rb') as input:
-	    BIO_train = pickle.load(input)
+	# with open(SAVE_NAME, 'rb') as input:
+	#     BIO_train = pickle.load(input)
 
 	INPUT_NUM=BIO_train.input_numb
 
@@ -122,15 +107,11 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	print('GPU USED?',torch.cuda.is_available())
 
 	if NN_model == 'RESNET18':
-		model = torch.hub.load('pytorch/vision:v0.4.2', 'resnet18', pretrained=True) # use resnet
-		num_ftrs = model.fc.in_features
-		# model.conv1 = nn.Conv2d(num_input_channel, 64, kernel_size=7, stride=2, padding=3,bias=False)
-		top_layer= nn.Conv2d(INPUT_NUM, 3, kernel_size=5, stride=1, padding=2)
-		model = nn.Sequential(top_layer,model)
-		model.fc = nn.Linear(num_ftrs, NUMB_CLASS)
-
+		model = MyResNet18() # use resnet
+		model.conv1 = nn.Conv2d(INPUT_NUM, 64, kernel_size=5, stride=1, padding=2)
+		model.fc = nn.Linear(517 ,NUMB_CLASS)
 	else:	
-		model = Network(INPUT_NUM,NUMB_CLASS)
+		model = Network_modespecific(INPUT_NUM,NUMB_CLASS)
 	model = model.to(device)
 
 	criterion = nn.CrossEntropyLoss()
@@ -140,19 +121,17 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	init_state = copy.deepcopy(model.state_dict())
 	init_state_opt = copy.deepcopy(optimizer.state_dict())
 
+	one_hot_embed= torch.eye(5)
 
-	for batch, label, dtype in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
+	for batch, label, dtype, prevlabels  in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
 		X = batch
 		y = label
 		types = dtype
+		prevlabel = prevlabels
 
 	accuracies =[]
-
 	ss_accuracies=[]
 	tr_accuracies=[]
-
-
-	class_accs = [0] * NUMB_CLASS
 
 
 	skf = KFold(n_splits = numfolds, shuffle = True)
@@ -161,9 +140,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	train_class=trainclass(model,optimizer,DATA_LOAD_BOOL,device,criterion,MODEL_NAME)
 
-	tests=[]
-	preds=[]
-	for train_index, test_index in skf.split(X, y, types):
+	for train_index, test_index in skf.split(X, y):
 
 		model.load_state_dict(init_state)
 		optimizer.load_state_dict(init_state_opt)
@@ -171,64 +148,30 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		X_train, X_test = X[train_index], X[test_index]
 		y_train, y_test = y[train_index], y[test_index]
 		types_train, types_test = types[train_index], types[test_index]
+		onehot_train, onehot_test = one_hot_embed[prevlabel[train_index]], one_hot_embed[prevlabel[test_index]]
 
-		train_dataset = TensorDataset( X_train, y_train, types_train)
-		test_dataset = TensorDataset( X_test, y_test, types_test)
+
+		train_dataset = TensorDataset( X_train, y_train, types_train,onehot_train)
+		test_dataset = TensorDataset( X_test, y_test, types_test,onehot_test)
 
 		trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 		testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
-		print("######################Fold:{}#####################".format(i+1))
-		train_class.train(trainloader,num_epoch)
+		print("######################Fold:{}#####################3".format(i+1))
+		train_class.train_modesp(trainloader,num_epoch)
 
 		model.load_state_dict(torch.load(MODEL_NAME))
 
 		# print("Evaluate on test set")
-
-		accs,ss_accs,tr_accs,pred,test,class_acc=train_class.evaluate(testloader)
+		accs,ss_accs,tr_accs=train_class.evaluate_modesp(testloader)
 		accuracies.append(accs)
 		ss_accuracies.append(ss_accs)
 		tr_accuracies.append(tr_accs)
 
-		preds.extend(pred)
-		tests.extend(test)
-
-		accs, class_acc =train_class.evaluate(testloader)
-		accuracies.append(accs)
-		for i in range(len(class_accs)):
-			class_accs[i] += class_acc[i]
-
-
-
 		i +=1
 
 	print('saved on the results')
-	print("average:")
-	for i in range(len(class_accs)):
-		if class_accs[i] == 0:
-			print("Class {} has no samples".format(i))
-		else:
-			print("Class {} accuracy: {}".format(i, class_accs[i]/numfolds))
 
-	# This is to see the activation map for the two conv layers:
-	conv1 = model._modules.get('sclayer1') # Get the layers we want to hook
-	conv2 = model._modules.get('sclayer2')
-
-	act_map1 = SaveFeatures(conv1) # Setup hook, data storage
-	act_map2 = SaveFeatures(conv2)
-
-	prediction = model(BIO_train[0][0].unsqueeze(0)) # Make a prediction
-	pred_probabilities = F.softmax(prediction).data.squeeze()
-	act_map1.remove() # Unhook
-	act_map2.remove() # Unhook
-
-	# Save activations
-	act_map1.plot_activation("conv1_activation")
-	act_map1.plot_activation("conv2_activation")
-
-	# Save one channel from the first datum in the dataset
-	img = Image.fromarray(BIO_train[0][0].numpy()[0], 'L')
-	img.save("input.png")
 
 	# with open(RESULT_NAME, 'w') as f:
 	# 	for item in accuracies:
@@ -251,35 +194,17 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 			f.write("%s " % item)
 	f.close()
 
-	conf= confusion_matrix(tests, preds)
-	print(conf)
-	print(metrics.classification_report(tests, preds, digits=3))
-
-	return conf
-
-
 
 classifiers=['CNN']
 sensors=["imu","emg","goin"]
-sensor_str='_'.join(sensors)
 # modes = ['bilateral','ipsilateral','contralateral']
 modes = ['bilateral']
-# NN= 'RESNET'
-NN = 'bionet'
+# NNMODEL = 'RESNET18'
+NNMODEL = 'bionet'
 for classifier in classifiers:
 	for i in range(3,4):
 		for combo in combinations(sensors,i):
 			sensor = [item for item in combo]
 			for mode in modes:
 				print(classifier, sensor, mode)
-				confusion=run_classifier(mode=mode,classifier=classifier,sensor=sensor,NN_model=NN)
-
-with open('./results/'+classifiers[0]+'_'+sensor_str+'_'+modes[0]+'_'+'confusion.txt', 'w') as f:
-	for items in confusion:
-		for item in items:
-			f.write("%s " % item)
-
-		f.write('\n')
-f.close()
-
-
+				run_classifier(mode=mode,classifier=classifier,sensor=sensor,NN_model = NNMODEL)

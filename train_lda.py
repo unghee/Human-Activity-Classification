@@ -161,13 +161,13 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 	f.close()
 
 
-classifiers=['SVM']
+classifiers=['LDA']
 # sensors=["emg"]
 sensors=["imu","emg","goin"]
 # modes = ['ipsilateral']
 modes = ['bilateral','ipsilateral','contralateral']
 for classifier in classifiers:
-	for i in range(1,4):
+	for i in range(3,4):
 		for combo in combinations(sensors,i):
 			sensor = [item for item in combo]
 			for mode in modes:
