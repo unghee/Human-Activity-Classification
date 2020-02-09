@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset
 
-from dataset import EnableDataset
+
 
 import pickle
 
@@ -23,10 +23,10 @@ import random
 
 import sys,os
 sys.path.append('.')
-
+# sys.path.append('../')
 from utils import *
 from networks import *
-
+from dataset import EnableDataset
 
 from itertools import combinations
 
@@ -44,6 +44,8 @@ class SaveFeatures():
 	# Save the first channel the activation map
 	def plot_activation(self, filename):
 		img = Image.fromarray(self.features[0,1], 'L')
+		plt.imshow(img)
+		plt.show()
 		img.save(filename + '.png')
 
 
@@ -99,11 +101,11 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
-	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
-	BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=16,hop_length=27,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=10,hop_length=10,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=10,hop_length=10,model_type='CNN')
 
 	INPUT_NUM=BIO_train.input_numb
-	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=16,hop_length=27,model_type='CNN')
+	
 	# with open('BIO_train_melspectro_500s_bands_16_hop_length_27.pkl', 'rb') as input:
 	#     BIO_train = pickle.load(input)
 
@@ -141,34 +143,34 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	train_class=trainclass(model,optimizer,DATA_LOAD_BOOL,device,criterion,MODEL_NAME)
 
-	for train_index, test_index in skf.split(X, y, types):
+	# for train_index, test_index in skf.split(X, y, types):
 
-		model.load_state_dict(init_state)
-		optimizer.load_state_dict(init_state_opt)
+	# 	model.load_state_dict(init_state)
+	# 	optimizer.load_state_dict(init_state_opt)
 
-		X_train, X_test = X[train_index], X[test_index]
-		y_train, y_test = y[train_index], y[test_index]
-		types_train, types_test = types[train_index], types[test_index]
+	# 	X_train, X_test = X[train_index], X[test_index]
+	# 	y_train, y_test = y[train_index], y[test_index]
+	# 	types_train, types_test = types[train_index], types[test_index]
 
-		train_dataset = TensorDataset( X_train, y_train, types_train)
-		test_dataset = TensorDataset( X_test, y_test, types_test)
+	# 	train_dataset = TensorDataset( X_train, y_train, types_train)
+	# 	test_dataset = TensorDataset( X_test, y_test, types_test)
 
-		trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-		testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
+	# 	trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+	# 	testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
-		print("######################Fold:{}#####################3".format(i+1))
-		train_class.train(trainloader,num_epoch)
+	# 	print("######################Fold:{}#####################3".format(i+1))
+	# 	train_class.train(trainloader,num_epoch)
 
-		model.load_state_dict(torch.load(MODEL_NAME))
+	# 	model.load_state_dict(torch.load(MODEL_NAME))
 
-		# print("Evaluate on test set")
-		accs, class_acc =train_class.evaluate(testloader)
-		accuracies.append(accs)
-		for i in range(len(class_accs)):
-			class_accs[i] += class_acc[i]
+	# 	# print("Evaluate on test set")
+	# 	accs, class_acc =train_class.evaluate(testloader)
+	# 	accuracies.append(accs)
+	# 	for i in range(len(class_accs)):
+	# 		class_accs[i] += class_acc[i]
 
 
-		i +=1
+	# 	i +=1
 
 	print('saved on the results')
 	print("average:")
@@ -178,6 +180,9 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		else:
 			print("Class {} accuracy: {}".format(i, class_accs[i]/numfolds))
 
+
+	model.load_state_dict(torch.load('./models/bestmodel_BATCH_SIZE32_LR1e-05_WD0.001_EPOCH200_BAND10_HOP10.pth', map_location='cpu'))
+
 	# This is to see the activation map for the two conv layers:
 	conv1 = model._modules.get('sclayer1') # Get the layers we want to hook
 	conv2 = model._modules.get('sclayer2')
@@ -185,7 +190,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	act_map1 = SaveFeatures(conv1) # Setup hook, data storage
 	act_map2 = SaveFeatures(conv2)
 
-	prediction = model(BIO_train[0][0].unsqueeze(0)) # Make a prediction
+	prediction = model(BIO_train[15][0].unsqueeze(0)) # Make a prediction
 	pred_probabilities = F.softmax(prediction).data.squeeze()
 	act_map1.remove() # Unhook
 	act_map2.remove() # Unhook
@@ -195,7 +200,10 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	act_map1.plot_activation("conv2_activation")
 
 	# Save one channel from the first datum in the dataset
-	img = Image.fromarray(BIO_train[0][0].numpy()[0], 'L')
+	img = BIO_train[0][0][0]
+	# img = Image.fromarray(BIO_train[15][0].numpy()[0], 'L')
+	plt.imshow(img)
+	plt.show()
 	img.save("input.png")
 
 	with open(RESULT_NAME, 'w') as f:
