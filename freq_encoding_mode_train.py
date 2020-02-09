@@ -108,28 +108,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	if NN_model == 'RESNET18':
 		model = MyResNet18() # use resnet
-		# num_ftrs = model.fc.in_features
-		# model.conv1 = nn.Conv2d(num_input_channel, 64, kernel_size=7, stride=2, padding=3,bias=False)
 		model.conv1 = nn.Conv2d(INPUT_NUM, 64, kernel_size=5, stride=1, padding=2)
-		# top_layer= nn.Conv2d(INPUT_NUM, 3, kernel_size=5, stride=1, padding=2)
-		# model = nn.Sequential(top_layer,model)
-		# model.fc = nn.Linear(num_ftrs, NUMB_CLASS)
 		model.fc = nn.Linear(517 ,NUMB_CLASS)
-
-		# model.load_state_dict(models.resnet18(pretrained=True).state_dict())
-		pretrained_dict = models.resnet18(pretrained=True).state_dict()
-		model_dict = model.state_dict()
-
-		# 1. filter out unnecessary keys
-		pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-		# pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-		# 2. overwrite entries in the existing state dict
-		model_dict.update(pretrained_dict) 
-		# 3. load the new state dict
-		model.load_state_dict(pretrained_dict)
-
-
-
 	else:	
 		model = Network_modespecific(INPUT_NUM,NUMB_CLASS)
 	model = model.to(device)
@@ -219,7 +199,8 @@ classifiers=['CNN']
 sensors=["imu","emg","goin"]
 # modes = ['bilateral','ipsilateral','contralateral']
 modes = ['bilateral']
-NNMODEL = 'RESNET18'
+# NNMODEL = 'RESNET18'
+NNMODEL = 'bionet'
 for classifier in classifiers:
 	for i in range(3,4):
 		for combo in combinations(sensors,i):

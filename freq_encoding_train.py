@@ -197,6 +197,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	conf= confusion_matrix(tests, preds)
 	print(conf)
+	print(metrics.classification_report(tests, preds, digits=3))
 
 	return conf
 
@@ -217,7 +218,7 @@ for classifier in classifiers:
 				print(classifier, sensor, mode)
 				confusion=run_classifier(mode=mode,classifier=classifier,sensor=sensor,NN_model=NN)
 
-with open('./results/'+classifiers+'_'+sensor_str+'_'+modes+'_'+'confusion.txt', 'w') as f:
+with open('./results/'+classifiers[0]+'_'+sensor_str+'_'+modes[0]+'_'+'confusion.txt', 'w') as f:
 	for items in confusion:
 		for item in items:
 			f.write("%s " % item)
