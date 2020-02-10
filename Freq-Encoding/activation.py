@@ -167,7 +167,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	# fig1, axs = plt.subplots(3,figsize=(6,20))
 	fig1, axs = plt.subplots(3)
-
+	fontname = 	 'Times New Roman' 
+	plt.rcParams['font.family'] = fontname
 	# representative image of IMU	Right_Shank_Ax
 	im=axs[0].imshow(normalize_output(BIO_train[0][0][0]))
 	axs[0].invert_yaxis()
@@ -176,12 +177,11 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	axs[0].spines['bottom'].set_visible(False)
 	axs[0].spines['left'].set_visible(False)
 
-	# axs[0].xaxis('off')
-	# axs[0].set_xticklabels([])
 	axs[0].get_xaxis().set_visible(False)
 	# cb=fig1.colorbar(im, ax=axs[0])
 	# cb.outline.set_visible(False)
-
+	title=axs[0].set_title('IMU',fontname=fontname) 
+	# title.rcParams['font.family'] = fontname
 	# EMG Right_TA
 	im2=axs[1].imshow(normalize_output(BIO_train[0][0][30]))
 	axs[1].invert_yaxis()
@@ -190,7 +190,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	axs[1].spines['bottom'].set_visible(False)
 	axs[1].spines['left'].set_visible(False)	
 	axs[1].get_xaxis().set_visible(False)
-
+	axs[1].set_title('EMG',fontname=fontname) 
 	# GION Right_TA
 	im3=axs[2].imshow(normalize_output(BIO_train[0][0][44]))
 	axs[2].invert_yaxis()
@@ -198,25 +198,49 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	axs[2].spines['right'].set_visible(False)
 	axs[2].spines['bottom'].set_visible(False)
 	axs[2].spines['left'].set_visible(False)
-	# axs[2].get_xaxis().set_visible(False)	
+	axs[2].set_title('Goniometer',fontname=fontname)
+	locs, labels = plt.xticks()  
+	# plt.xticks(np.array([0,25,50]), ['0','0.5','1'])
+	# plt.xlabel('Time (s)')
+
+	locs, labels = plt.yticks()  
+	# plt.yticks(np.array([0,25,50]), ['0','0.5','1'])
+
+	# plt.xlabel('Number of Pixels')
+	# axs[0].set_ylabel('Number of Pixels')
+
+	# axs[0].set_yticks(np.array([0,2,4,6,8]))
 
 
-	# axs[2].set_yticks(np.arange(0, 10, 2.0))
+
+	def pix_to_hz(x):
+		y=x*25
+		return y
+	def hz_to_pix(x):
+		y=x/25
+		return y
 
 
-	# fig1.colorbar(im3, ax=axs[2])
 
-	# cbar_ax = fig1.add_axes([0.7, 0.15, 0.05, 0.7])
-	# cb=fig1.colorbar(im, cax=cbar_ax)
-	# cb.outline.set_visible(False)
 
-	# axs[0].plot()
-	# plt.show()
-	# img = Image.fromarray(BIO_train[15][0].numpy()[0], 'L')
-	# plt.imshow(img,interpolation='bilinear')
-	# plt.gca().invert_yaxis()
-	# plt.show()
-	# img.save("input.png")
+	ax2 = axs[0].secondary_yaxis('right', functions=(pix_to_hz,hz_to_pix))
+	# ax2 = axs[0].twinx()
+	ax2.set_yticks(np.array([0,50/25,100/25,150/25,200/25]))
+	ax2.set_yticklabels(['0','50','100','150','200'])
+	# ax2.yaxis.set_ticks(np.array([0,50/25,100/25,150/25,200/25]))
+	# ax2.yaxis.set_tickslabels(['0','50','100','150','200'])
+	ax2.spines['top'].set_visible(False)
+	ax2.spines['right'].set_visible(False)
+	ax2.spines['bottom'].set_visible(False)
+	ax2.spines['left'].set_visible(False)
+	ax2.set_ylabel('Hz')
+
+
+	# plt.yticks(np.array([0,50/25,100/25,150/25,200/25,250/25]), ['0','50','100','150','200','250'])
+	fig1.text(0.5, 0.04, 'Number of Time Frame', va='center', ha='center', fontsize=plt.rcParams['axes.labelsize'])
+	fig1.text(0.04, 0.5, 'Number of Mel-bins', va='center', ha='center', rotation='vertical', fontsize=plt.rcParams['axes.labelsize'])
+	
+
 
 # Visualize feature maps
 	activation = {}
@@ -235,11 +259,9 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	act = activation['sclayer1'].squeeze()
 
 	fig, axarr = plt.subplots(5,2)
-	idxes = random.sample(range(0, 128), 10)
-	# fig, axarr = plt.subplots(10,)
+	# idxes = random.sample(range(0, 128), 10)
+	idxes = np.array([4,63,32,5,56,8,119,105,110,48])
 
-	# for idx in range(act.size(0)):
-	# axs[3].set_title('Activation')
 	col =0
 	for idx, idxe in enumerate(idxes):
 
@@ -250,29 +272,36 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	    axarr[rem,col].spines['right'].set_visible(False)
 	    axarr[rem,col].spines['bottom'].set_visible(False)
 	    axarr[rem,col].spines['left'].set_visible(False)
+	    # axarr[rem,col].get_xaxis().set_visible(False)
+	    # axarr[rem,col].get_yaxis().set_visible(False)
 	    if not (idx % 5 ==4):
 	    	axarr[rem,col].get_xaxis().set_visible(False)
 	    if idx >4:
 	    	axarr[rem,col].get_yaxis().set_visible(False)
 	    if idx %  5==4:
 	    	col +=1
-	    	
 	    print(idx,idxe)
 
+	fontname = 	 'Times New Roman'   	
+	for ax in axarr.flatten():
+	    labels = ax.get_xticklabels() + ax.get_yticklabels()
+	    [label.set_fontname(fontname) for label in labels]
 
-	    # plt.imshow(act[idx])
+	for ax in axs.flatten():
+	    labels = ax.get_xticklabels() + ax.get_yticklabels()
+	    [label.set_fontname(fontname) for label in labels]
+
 
 	# cbar_ax = fig1.add_axes([0.9, 0.15, 0.05, 0.7])
 	# cb=fig1.colorbar(im5, cax=cbar_ax)
 
-	plt.rcParams["font.serif"] = "Times New Roman"
-	# 
+
+	fig.text(0.5, 0.04, 'Number of Pixels', va='center', ha='center', fontsize=plt.rcParams['axes.labelsize'])
+	fig.text(0.04, 0.5, 'Number of Pixels', va='center', ha='center', rotation='vertical', fontsize=plt.rcParams['axes.labelsize'])
+
 	fig1.savefig('./input.png')
 	fig.savefig('./activation.png')
 	plt.show()
-
-	# prediction = model(BIO_train[0][0].unsqueeze(0)) # Make a prediction
-
 
 
 
