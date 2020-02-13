@@ -5,6 +5,8 @@
 *.pkl
 old/
 *.pth
+*.m~
+
 
 env/
 .DS_Store
