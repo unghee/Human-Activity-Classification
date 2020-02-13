@@ -267,7 +267,9 @@ class EnableDataset(Dataset):
                 melspec_full = librosa.feature.melspectrogram(y=row,sr=fs,n_fft=hop_length*2, hop_length=hop_length,n_mels=bands)
                 logspec_full = librosa.amplitude_to_db(melspec_full)
                 # logspec_delta = librosa.feature.delta(logspec_full) # add derivative
-                # if x == 30:
+
+                ## plotting spectro and melspectro
+                # if x == 0:
                 #     plt.figure(figsize=(10,8))
                 #     plt.rcParams['font.family'] = 'Times New Roman'  
                 #     plt.rcParams.update({'font.size': 31})
@@ -285,19 +287,14 @@ class EnableDataset(Dataset):
                 #     plt.show()
 
                 #     plt.figure(figsize=(10,8))
-                #     S_dB = librosa.amplitude_to_db(melspec_full, ref=np.max)
+                #     S_dB = librosa.power_to_db(melspec_full, ref=np.max)
                 #     librosa.display.specshow(S_dB,x_axis='s',hop_length=10,y_axis='linear',sr=fs,fmax=fs/2,cmap='viridis')
                 #     plt.colorbar(format='%+2.0f dB')
 
-                #     # plt.imshow(logspec_full)
-                #     # plt.show()
-                #     # with open('./batchdata.txt', 'w') as f:
-                #     #     for item in row:
-                #     #         f.write("%s\n" % item)
-                #     # f.close()
                 #     locs, labels = plt.xticks()  
                 #     plt.xticks(np.array([0.25,0.5,0.75]), ['0.25','0.5','0.75'])
                 #     plt.show()
+                #     pdb.set_trace()
 
                 vals.append(logspec_full)
         return vals
