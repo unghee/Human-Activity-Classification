@@ -28,7 +28,7 @@ class EnableDataset(Dataset):
     window_size: how many samples to consider for a label
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN", data_range=(1, 10), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
+    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN",mode_specific=False, data_range=(1, 51), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
         self.model_type = model_type
         if self.model_type == "CNN":
             print("    range: [%d, %d)" % (data_range[0], data_range[1]))
@@ -37,6 +37,8 @@ class EnableDataset(Dataset):
             self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
             self.transform = transform
             self.input_numb = 0
+            self.mode_specific=mode_specific
+
             exclude_list = [
                 # 'AB194_Circuit_009',
                 # 'AB194_Circuit_017',
@@ -141,7 +143,10 @@ class EnableDataset(Dataset):
                             data = np.array(data)
                             self.input_numb=np.shape(data)[1]
                             img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)
-                            self.dataset.append((img,labels[idx], timestep_type[idx]))
+                            if self.mode_specific:
+                                self.dataset.append((img,labels[idx],timestep_type[idx],int(self.prev_label[idx])))
+                            else:
+                                self.dataset.append((img,labels[idx], timestep_type[idx]))
         else:
             self.dataset = []
             self.prev_label = np.array([], dtype=np.int64)
@@ -160,6 +165,7 @@ class EnableDataset(Dataset):
 
 
                     # while not pd.isnull(raw_data.loc[index,'Trigger']):
+                    # pdb.set_trace()
                     for index in range(0,raw_data.shape[0]):
                         trigger = raw_data.loc[index,'Trigger']
                         trigger=str(int(trigger))
@@ -199,7 +205,7 @@ class EnableDataset(Dataset):
                                 triggers.append(trigger) # triggers can be used to compare translational and steady-state error
 
                                 label = float(trigger[2])
-                                if float(trigger[2]) == 6:
+                                if float(trigger[2]) == 0 or float(trigger[0])== 0 :
                                     print('***********',trigger[2])
 
                                 data = raw_data.loc[index, :'Contra RF AR6']
@@ -223,6 +229,7 @@ class EnableDataset(Dataset):
 
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
+                    pdb.set_trace()
         print("load dataset done")
 
 
@@ -231,12 +238,22 @@ class EnableDataset(Dataset):
 
     def __getitem__(self, index):
         if self.model_type == "CNN":
-            img, label, timestep_type = self.dataset[index]
-            if self.transform:
-                img = F.to_pil_image(np.uint8(img))
-                img = self.transform(img)
-                img = np.array(img)
-            return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type
+            if self.mode_specific:
+                img, label, timestep_type, prev__label= self.dataset[index]
+                if self.transform:
+                    img = F.to_pil_image(np.uint8(img))
+                    img = self.transform(img)
+                    img = np.array(img)
+                    pdb.set_trace()
+                return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type, prev__label
+
+            else:
+                img, label, timestep_type = self.dataset[index]
+                if self.transform:
+                    img = F.to_pil_image(np.uint8(img))
+                    img = self.transform(img)
+                    img = np.array(img)
+                return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type
         else:
             img, label, timestep_type = self.dataset[index]
             return img, np.array(label), timestep_type
