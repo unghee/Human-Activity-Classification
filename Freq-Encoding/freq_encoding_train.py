@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset
 
-from dataset import EnableDataset
+
 
 import pickle
 
@@ -26,28 +26,12 @@ import random
 
 import sys,os
 sys.path.append('.')
-
+# sys.path.append('../')
 from utils import *
 from networks import *
-
+from dataset import EnableDataset
 
 from itertools import combinations
-
-# Used to add a hook to our model. The hook is a function that will run
-# during our model execution.
-class SaveFeatures():
-	features=None
-	def __init__(self, m): self.hook = m.register_forward_hook(self.hook_fn)
-
-	def hook_fn(self, module, input, output):
-		self.features = ((output.cpu()).data).numpy()
-
-	def remove(self):
-		self.hook.remove()
-	# Save the first channel the activation map
-	def plot_activation(self, filename):
-		img = Image.fromarray(self.features[0,1], 'L')
-		img.save(filename + '.png')
 
 
 
@@ -104,11 +88,12 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
+
 	BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
 
 
-	# if SAVING_BOOL:
-	# 	save_object(BIO_train,SAVE_NAME)
+	if SAVING_BOOL:
+		save_object(BIO_train,SAVE_NAME)
 
 	with open(SAVE_NAME, 'rb') as input:
 	    BIO_train = pickle.load(input)
@@ -183,6 +168,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 		model.load_state_dict(torch.load(MODEL_NAME))
 
+
 		# print("Evaluate on test set")
 
 		accs,ss_accs,tr_accs,pred,test,class_acc=train_class.evaluate(testloader)
@@ -210,30 +196,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		else:
 			print("Class {} accuracy: {}".format(i, class_accs[i]/numfolds))
 
-	# This is to see the activation map for the two conv layers:
-	conv1 = model._modules.get('sclayer1') # Get the layers we want to hook
-	conv2 = model._modules.get('sclayer2')
 
-	act_map1 = SaveFeatures(conv1) # Setup hook, data storage
-	act_map2 = SaveFeatures(conv2)
-
-	prediction = model(BIO_train[0][0].unsqueeze(0)) # Make a prediction
-	pred_probabilities = F.softmax(prediction).data.squeeze()
-	act_map1.remove() # Unhook
-	act_map2.remove() # Unhook
-
-	# Save activations
-	act_map1.plot_activation("conv1_activation")
-	act_map1.plot_activation("conv2_activation")
-
-	# Save one channel from the first datum in the dataset
-	img = Image.fromarray(BIO_train[0][0].numpy()[0], 'L')
-	img.save("input.png")
-
-	# with open(RESULT_NAME, 'w') as f:
-	# 	for item in accuracies:
-	# 		f.write("%s\n" % item)
-	# f.close()
+	model.load_state_dict(torch.load('./models/bestmodel_BATCH_SIZE32_LR1e-05_WD0.001_EPOCH200_BAND10_HOP10.pth', map_location='cpu'))
 
 
 	print('writing...')
