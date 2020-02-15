@@ -14,7 +14,9 @@ import numpy as np
 import os
 import torchvision.transforms.functional as F
 
+import librosa
 
+import librosa.display
 
 class EnableDataset(Dataset):
     '''
@@ -26,7 +28,7 @@ class EnableDataset(Dataset):
     label: when specified, the dataset will only contain data with the given label value
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, transform=None):
+    def __init__(self, dataDir='./Data/' ,subject_list=['156'], data_range=(1, 10), window_size=500, time_series=False, label=None, event_label = None, transform=None):
 
         print("    range: [%d, %d)" % (data_range[0], data_range[1]))
         self.dataset = []
@@ -53,7 +55,8 @@ class EnableDataset(Dataset):
                     while not pd.isnull(raw_data.loc[index, event]):
                         trigger = raw_data.loc[index, event+'_Trigger']
                         trigger=str(int(trigger))
-                        if label is None or (float(trigger[0]) == label and float(trigger[2]) != 6 ):
+                        # if label is None or (float(trigger[0]) == label and event[0]+event[-7] == event_label and float(trigger[2]) != 6 ):
+                        if float(trigger[0]) == label and event[0]+event[-7] == event_label and float(trigger[2]) != 6 and float(trigger[0]) !=6:
                             timesteps.append(raw_data.loc[index, event])
                             trigger = raw_data.loc[index, event+'_Trigger']
                             trigger=str(int(trigger))
@@ -67,9 +70,11 @@ class EnableDataset(Dataset):
                     if timestep-window_size-1 >= 0:
                         data = np.array(raw_data.loc[timestep-window_size-1:timestep-2, 'Right_Shank_Ax':'Left_Knee_Velocity'])
                         if not time_series:
-                            img= self.spectrogram2(data)/128.0-1.0
+                            # img= self.spectrogram2(data)/128.0-1.0
+                            img = self.melspectrogram(data)
                             self.dataset.append((img,labels[idx]))
                         else:
+                            data = (data-np.mean(data, axis=0))/np.std(data, axis=0)
                             self.dataset.append((data.T,labels[idx]))
         print("load dataset done")
 
@@ -88,16 +93,48 @@ class EnableDataset(Dataset):
     def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
         vals = []
         for i in range(0,17):
-	        for x in range(3*i,3*(i+1)):
-	            row = segmented_data[:,x]
-	            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
-	            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
-	            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
-	            Sxx = Sxx/np.max(Sxx)*255
-	            vals.append(Sxx)
+            for x in range(3*i,3*(i+1)):
+                row = segmented_data[:,x] # how about changing to log scale?
+                f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
+                tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
+                Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
+                Sxx = Sxx/np.max(Sxx)*255
+                vals.append(Sxx)
+                # plt.imshow(Sxx)
+                # plt.show()
         out = np.stack(vals, axis=0)
-        out=out.astype(np.uint8)
+
+        # out=out.astype(np.uint8)
         return out
+
+    def melspectrogram(self, segmented_data, fs=500,bands=16, frames=16,hop_length=27):
+
+        ###### STACKING UP MULTIPLE SPECTOGRAM APPROACH! 
+
+        vals = []
+        # vals2 =[]
+        # n_mels height of the image
+        # time_steps : number of time-steps. width of the image
+        # len(y) = time_steps*hop_length 
+        # time_steps = len(y)/hop_length
+
+        for i in range(0,17):
+            for x in range(3*i,3*(i+1)):
+                row = segmented_data[:,x]
+                melspec_full = librosa.feature.melspectrogram(y=row,sr=fs,n_fft=hop_length*2, hop_length=hop_length,n_mels=bands) 
+                logspec_full = librosa.amplitude_to_db(melspec_full) 
+                # logspec_delta = librosa.feature.delta(logspec_full) # add derivative
+                # librosa.display.specshow(logspec_full, x_axis='time',y_axis='mel', sr=fs,fmax=fs/2)
+                # plt.colorbar(format='%+02.0f dB') 
+                # plt.imshow(logspec_full)
+                # plt.show()
+  
+                vals.append(logspec_full)
+
+
+        return vals
+
+
 
     def cwt(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
         vals = []

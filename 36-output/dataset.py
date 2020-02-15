@@ -18,7 +18,7 @@ import torchvision.transforms.functional as F
 import librosa
 
 import librosa.display
-import pdb
+
 
 class EnableDataset(Dataset):
     '''
@@ -28,7 +28,7 @@ class EnableDataset(Dataset):
     window_size: how many samples to consider for a label
     transform: optional transform to apply to the data
     '''
-    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN",mode_specific=False, data_range=(1, 51), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
+    def __init__(self, dataDir='../Data/', subject_list=['156'], model_type="CNN", data_range=(1, 10), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
         self.model_type = model_type
         if self.model_type == "CNN":
             print("    range: [%d, %d)" % (data_range[0], data_range[1]))
@@ -36,50 +36,12 @@ class EnableDataset(Dataset):
             self.prev_label = np.array([], dtype=np.int64)
             self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
             self.transform = transform
-            self.input_numb = 0
-            self.mode_specific=mode_specific
-
-            exclude_list = [
-                # 'AB194_Circuit_009',
-                # 'AB194_Circuit_017',
-                # 'AB194_Circuit_018',
-                # 'AB194_Circuit_026',
-                # "AB194_Circuit_033",
-                # "AB194_Circuit_038",
-                # "AB193_Circuit_022",
-                # "AB193_Circuit_043",
-                # "AB192_Circuit_034",
-                'AB190_Circuit_013',
-                # 'AB190_Circuit_014',
-                # 'AB190_Circuit_037',
-                'AB190_Circuit_045',
-                # "AB191_Circuit_001",
-                'AB191_Circuit_002',
-                'AB191_Circuit_022',
-                # "AB191_Circuit_047",
-                # "AB191_Circuit_049",
-                "AB189_Circuit_004",
-                # "AB189_Circuit_024",
-                "AB189_Circuit_032",
-                # "AB189_Circuit_035",
-                # "AB188_Circuit_027",
-                "AB188_Circuit_032",
-                "AB186_Circuit_002",
-                # "AB186_Circuit_004",
-                # "AB186_Circuit_016",
-                # "AB186_Circuit_050",
-                # "AB185_Circuit_002",
-                "AB185_Circuit_008",
-                "AB185_Circuit_010",
-                "AB156_Circuit_005",
-                "AB156_Circuit_050"
-            ]
 
             for subjects in subject_list:
                 for i in range(data_range[0], data_range[1]):
                     filename = dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i
-                    if not os.path.exists(filename) or ('AB' + subjects+ '_Circuit_%03d_post'% i) in exclude_list:
-                        print(filename, 'not found or excluded')
+                    if not os.path.exists(filename):
+                        print(filename, 'not found')
                         continue
                     raw_data = pd.read_csv(filename)
 
@@ -129,24 +91,19 @@ class EnableDataset(Dataset):
                             else:
                                 data = data.filter(regex="^((?!Heel|Toe).)*$", axis=1)
 
-                            # regex = "(?=Mode"
-                            regex = "(?=!Mode"
+                            regex = "(?=Mode|.*Ankle.*|.*Knee.*"
                             if "imu" in sensors:
                                 regex += "|.*A[xyz].*"
                             if "goin" in sensors:
-                                regex += "|.*G[xyz].*|.*Ankle.*|.*Knee.*"
+                                regex += "|.*G[xyz].*"
                             if "emg" in sensors:
                                 regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
                             regex += ")"
                             data = data.filter(regex=regex, axis=1)
 
                             data = np.array(data)
-                            self.input_numb=np.shape(data)[1]
                             img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)
-                            if self.mode_specific:
-                                self.dataset.append((img,labels[idx],timestep_type[idx],int(self.prev_label[idx])))
-                            else:
-                                self.dataset.append((img,labels[idx], timestep_type[idx]))
+                            self.dataset.append((img,labels[idx], timestep_type[idx]))
         else:
             self.dataset = []
             self.prev_label = np.array([], dtype=np.int64)
@@ -165,7 +122,6 @@ class EnableDataset(Dataset):
 
 
                     # while not pd.isnull(raw_data.loc[index,'Trigger']):
-                    # pdb.set_trace()
                     for index in range(0,raw_data.shape[0]):
                         trigger = raw_data.loc[index,'Trigger']
                         trigger=str(int(trigger))
@@ -180,24 +136,7 @@ class EnableDataset(Dataset):
                                 label = float(trigger[2])
                                 if float(trigger[2]) == 6:
                                     print('***********',trigger[2])
-                                data = raw_data.loc[index, :'Contra RF AR6']
-                                if mode == "ipsilateral":
-                                    data = data.filter(regex='(?=.*Ipsi.*|.*Waist.*)', axis=0)
-                                elif mode == "contralateral":
-                                    data = data.filter(regex='(?=.*Contra.*|.*Waist.*)', axis=0)
-
-                                # regex = "(?=Mode|.*Ankle.*|.*Knee.*"
-                                regex = "(?=!Mode|.*Ankle.*|.*Knee.*"
-                                if "imu" in sensors:
-                                    regex += "|.*A[xyz].*"
-                                if "goin" in sensors:
-                                    regex += "|.*G[xyz].*|.*Ankle.*|.*Knee.*"
-                                if "emg" in sensors:
-                                    regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
-                                regex += ")"
-                                data = data.filter(regex=regex, axis=0)
-                                data = np.array(data)
-
+                                data = np.array(raw_data.loc[index, :'Contra RF AR6'])
                                 self.dataset.append((data.T,label, timestep_type[-1]))
                         else:
                             if float(trigger[2]) != 6 and float(trigger[0]) !=6:
@@ -205,31 +144,11 @@ class EnableDataset(Dataset):
                                 triggers.append(trigger) # triggers can be used to compare translational and steady-state error
 
                                 label = float(trigger[2])
-                                if float(trigger[2]) == 0 or float(trigger[0])== 0 :
+                                if float(trigger[2]) == 6:
                                     print('***********',trigger[2])
 
-                                data = raw_data.loc[index, :'Contra RF AR6']
-
-                                if mode == "ipsilateral":
-                                    data = data.filter(regex='(?=.*Ipsi.*|.*Waist.*)', axis=0)
-                                elif mode == "contralateral":
-                                    data = data.filter(regex='(?=.*Contra.*|.*Waist.*)', axis=0)
-
-                                # regex = "(?=Mode|.*Ankle.*|.*Knee.*"
-                                regex = "(?=!Mode|.*Ankle.*|.*Knee.*"
-                                if "imu" in sensors:
-                                    regex += "|.*A[xyz].*"
-                                if "goin" in sensors:
-                                    regex += "|.*G[xyz].*|.*Ankle.*|.*Knee.*"
-                                if "emg" in sensors:
-                                    regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
-                                regex += ")"
-                                data = data.filter(regex=regex, axis=0)
-                                data = np.array(data)
-
-
+                                data = np.array(raw_data.loc[index, :'Contra RF AR6'])
                                 self.dataset.append((data.T,label, timestep_type[-1]))
-                    pdb.set_trace()
         print("load dataset done")
 
 
@@ -238,22 +157,12 @@ class EnableDataset(Dataset):
 
     def __getitem__(self, index):
         if self.model_type == "CNN":
-            if self.mode_specific:
-                img, label, timestep_type, prev__label= self.dataset[index]
-                if self.transform:
-                    img = F.to_pil_image(np.uint8(img))
-                    img = self.transform(img)
-                    img = np.array(img)
-                    pdb.set_trace()
-                return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type, prev__label
-
-            else:
-                img, label, timestep_type = self.dataset[index]
-                if self.transform:
-                    img = F.to_pil_image(np.uint8(img))
-                    img = self.transform(img)
-                    img = np.array(img)
-                return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type
+            img, label, timestep_type = self.dataset[index]
+            if self.transform:
+                img = F.to_pil_image(np.uint8(img))
+                img = self.transform(img)
+                img = np.array(img)
+            return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type
         else:
             img, label, timestep_type = self.dataset[index]
             return img, np.array(label), timestep_type
@@ -276,42 +185,12 @@ class EnableDataset(Dataset):
         ###### STACKING UP MULTIPLE SPECTOGRAM APPROACH!
 
         vals = []
-        # for i in range(0,17):
-        #     for x in range(3*i,3*(i+1)):
-        for x in range(0,np.shape(segmented_data)[1]):
-
+        for i in range(0,17):
+            for x in range(3*i,3*(i+1)):
                 row = segmented_data[:,x]
                 melspec_full = librosa.feature.melspectrogram(y=row,sr=fs,n_fft=hop_length*2, hop_length=hop_length,n_mels=bands)
                 logspec_full = librosa.amplitude_to_db(melspec_full)
-                # logspec_delta = librosa.feature.delta(logspec_full) # add derivative
-
-                ## plotting spectro and melspectro
-                # if x == 0:
-                #     plt.figure(figsize=(10,8))
-                #     plt.rcParams['font.family'] = 'Times New Roman'  
-                #     plt.rcParams.update({'font.size': 31})
-                #     # D = librosa.amplitude_to_db(np.abs(librosa.stft(row)), ref=np.max)
-                #     # librosa.display.specshow(D, x_axis='s',y_axis='mel',sr=fs,fmax=fs/2,cmap='viridis')
-                #     f, t, Sxx=signal.spectrogram(row, fs, window=signal.windows.hamming(hop_length*2, True),nfft=hop_length*2, noverlap=hop_length)
-                #     # plt.imshow(spec,aspect='auto',origin='lower',extent=[times.min(),times.max(),freqs.min(),freqs.max()])
-                #     plt.pcolormesh(t, f, 10*np.log10(Sxx),vmin=-80, vmax=0)
-                #     # plt.pcolormesh(t, f, Sxx,norm = matplotlib.colors.Normalize(0,1))
-                #     plt.colorbar(format='%+2.0f dB')
-                #     plt.xlabel('Time (s)')
-                #     plt.ylabel('Hz')
-                #     # plt.title('Linear-frequency power spectrogram')
-                #     plt.savefig('./spectro.png')
-                #     plt.show()
-
-                #     plt.figure(figsize=(10,8))
-                #     S_dB = librosa.power_to_db(melspec_full, ref=np.max)
-                #     librosa.display.specshow(S_dB,x_axis='s',hop_length=10,y_axis='linear',sr=fs,fmax=fs/2,cmap='viridis')
-                #     plt.colorbar(format='%+2.0f dB')
-
-                #     locs, labels = plt.xticks()  
-                #     plt.xticks(np.array([0.25,0.5,0.75]), ['0.25','0.5','0.75'])
-                #     plt.show()
-                #     pdb.set_trace()
+                logspec_delta = librosa.feature.delta(logspec_full) # add derivative
 
                 vals.append(logspec_full)
         return vals
