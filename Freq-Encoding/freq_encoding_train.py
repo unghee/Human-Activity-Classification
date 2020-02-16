@@ -114,7 +114,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		model = nn.Sequential(top_layer,model)
 		model.fc = nn.Linear(num_ftrs, NUMB_CLASS)
 
-	else:
+	else:	
 		model = Network(INPUT_NUM,NUMB_CLASS)
 	model = model.to(device)
 
@@ -139,13 +139,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	class_accs = [0] * NUMB_CLASS
 
-	# What we originally had
-	# skf = KFold(n_splits = numfolds, shuffle = True)
 
-	# This will do leave one out
-	skf = KFold(n_splits = X.shape[0], shuffle = True)
-	leave_one_out = True
-
+	skf = KFold(n_splits = numfolds, shuffle = True)
 	i = 0
 
 
@@ -154,9 +149,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	tests=[]
 	preds=[]
 	for train_index, test_index in skf.split(X, y, types):
-		# Added this to do leave one out
-		if i == numfolds and leave_one_out:
-			break
+
 		model.load_state_dict(init_state)
 		optimizer.load_state_dict(init_state_opt)
 
@@ -252,3 +245,5 @@ with open('./results/'+classifiers[0]+'_'+sensor_str+'_'+modes[0]+'_'+'confusion
 
 		f.write('\n')
 f.close()
+
+
