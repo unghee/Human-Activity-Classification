@@ -128,13 +128,17 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 			X_train = batch
 			y_train = label
 			types_train = dtype
+		BIO_train = None
+		train_set = None
 
 		BIO_test = torch.utils.data.ConcatDataset(test_set)
-		wholeloader = DataLoader(BIO_test, batch_size=len(BIO_train))
+		wholeloader = DataLoader(BIO_test, batch_size=len(BIO_test))
 		for batch, label, dtype in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
 			X_test = batch
 			y_test = label
 			types_test = dtype
+		BIO_test = None
+		test_set = None
 
 		train_dataset = TensorDataset( X_train, y_train, types_train)
 		test_dataset = TensorDataset( X_test, y_test, types_test)
@@ -154,10 +158,10 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		preds.extend(pred)
 		tests.extend(test)
 
-		# for j in range(len(class_acc)):
-		# 	class_accs[j] += class_acc[j]
 
-		del BIO_train,wholeloader, trainloader, testloader, train_set, test_set
+		for j in range(len(class_accs)):
+			class_accs[j] += class_acc[j]
+
 
 		i +=1
 

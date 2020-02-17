@@ -229,8 +229,7 @@ class EnableDataset(Dataset):
 
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
-                    pdb.set_trace()
-        print("load dataset done")
+                    # pdb.set_trace()
 
 
     def __len__(self):
@@ -244,7 +243,7 @@ class EnableDataset(Dataset):
                     img = F.to_pil_image(np.uint8(img))
                     img = self.transform(img)
                     img = np.array(img)
-                    pdb.set_trace()
+                    # pdb.set_trace()
                 return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type, prev__label
 
             else:
