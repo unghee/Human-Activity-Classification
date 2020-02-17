@@ -14,7 +14,7 @@ from dataset import EnableDataset
 import pickle
 
 from sklearn.model_selection import KFold, StratifiedKFold,ShuffleSplit ,train_test_split
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix,classification_report
 
 from PIL import Image
 
@@ -32,23 +32,6 @@ from networks import *
 
 
 from itertools import combinations
-
-# Used to add a hook to our model. The hook is a function that will run
-# during our model execution.
-class SaveFeatures():
-	features=None
-	def __init__(self, m): self.hook = m.register_forward_hook(self.hook_fn)
-
-	def hook_fn(self, module, input, output):
-		self.features = ((output.cpu()).data).numpy()
-
-	def remove(self):
-		self.hook.remove()
-	# Save the first channel the activation map
-	def plot_activation(self, filename):
-		img = Image.fromarray(self.features[0,1], 'L')
-		img.save(filename + '.png')
-
 
 
 def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"],NN_model=None):
@@ -104,11 +87,12 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
-	BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 6),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
 
 
-	# if SAVING_BOOL:
-	# 	save_object(BIO_train,SAVE_NAME)
+	if SAVING_BOOL:
+		save_object(BIO_train,SAVE_NAME)
 
 	with open(SAVE_NAME, 'rb') as input:
 	    BIO_train = pickle.load(input)
@@ -152,7 +136,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	tr_accuracies=[]
 
 
-	class_accs = [0] * NUMB_CLASS
+	# class_accs = [0] * NUMB_CLASS
+	class_acc_list=[]
 
 
 	skf = KFold(n_splits = numfolds, shuffle = True)
@@ -193,42 +178,21 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		preds.extend(pred)
 		tests.extend(test)
 
-		accs, class_acc =train_class.evaluate(testloader)
-		accuracies.append(accs)
-		for i in range(len(class_accs)):
-			class_accs[i] += class_acc[i]
+		# for j in range(len(class_accs)):
+		# 	class_accs[j] += class_acc[j]
 
-
+		class_acc_list.append(class_acc)
 
 		i +=1
 
 	print('saved on the results')
-	print("average:")
-	for i in range(len(class_accs)):
-		if class_accs[i] == 0:
-			print("Class {} has no samples".format(i))
-		else:
-			print("Class {} accuracy: {}".format(i, class_accs[i]/numfolds))
+	# print("average:")
+	# for i in range(len(class_accs)):
+	# 	if class_accs[i] == 0:
+	# 		print("Class {} has no samples".format(i))
+	# 	else:
+	# 		print("Class {} accuracy: {}".format(i, class_accs[i]/numfolds))
 
-	# This is to see the activation map for the two conv layers:
-	conv1 = model._modules.get('sclayer1') # Get the layers we want to hook
-	conv2 = model._modules.get('sclayer2')
-
-	act_map1 = SaveFeatures(conv1) # Setup hook, data storage
-	act_map2 = SaveFeatures(conv2)
-
-	prediction = model(BIO_train[0][0].unsqueeze(0)) # Make a prediction
-	pred_probabilities = F.softmax(prediction).data.squeeze()
-	act_map1.remove() # Unhook
-	act_map2.remove() # Unhook
-
-	# Save activations
-	act_map1.plot_activation("conv1_activation")
-	act_map1.plot_activation("conv2_activation")
-
-	# Save one channel from the first datum in the dataset
-	img = Image.fromarray(BIO_train[0][0].numpy()[0], 'L')
-	img.save("input.png")
 
 	# with open(RESULT_NAME, 'w') as f:
 	# 	for item in accuracies:
@@ -249,11 +213,41 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		f.write('transitional ')
 		for item in tr_accuracies:
 			f.write("%s " % item)
+
+		for j in range(0,5):
+			f.write('\n')
+			f.write('class {} '.format(j))
+			for m in range(0,numfolds):
+				f.write("%s " % class_acc_list[m][j])
+
+
+		# for m in range(0,numfolds):
+		# 	f.write('class {}'.format(m))
+		# 	for item in class_acc_list[m,:]:
+		# 		f.write("%s " % item)
+		# f.write('\n')
+		# f.write('class 2 ')
+		# for item in class_acc_list[1]:
+		# 	f.write("%s " % item)
+		# f.write('\n')
+		# f.write('class 3 ')
+		# for item in class_acc_list[2]:
+		# 	f.write("%s " % item)
+		# f.write('\n')
+		# f.write('class 4 ')
+		# for item in class_acc_list[3]:
+		# 	f.write("%s " % item)
+		# f.write('\n')
+		# f.write('class 5 ')
+		# for item in class_acc_list[4]:
+		# 	f.write("%s " % item)
+
+
 	f.close()
 
 	conf= confusion_matrix(tests, preds)
 	print(conf)
-	print(metrics.classification_report(tests, preds, digits=3))
+	print(classification_report(tests, preds, digits=3))
 
 	return conf
 
@@ -265,7 +259,7 @@ sensor_str='_'.join(sensors)
 # modes = ['bilateral','ipsilateral','contralateral']
 modes = ['bilateral']
 # NN= 'RESNET'
-NN = 'bionet'
+NN = 'LAPNET'
 for classifier in classifiers:
 	for i in range(3,4):
 		for combo in combinations(sensors,i):
