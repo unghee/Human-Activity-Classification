@@ -7,14 +7,14 @@ from torch import nn
 from torch import optim
 import torch.nn.functional as F
 from torchvision import datasets, transforms
-from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset
+from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset, ConcatDataset
 
 
 
 import pickle
 
 from sklearn.model_selection import KFold, StratifiedKFold,ShuffleSplit ,train_test_split
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, classification_report
 
 from PIL import Image
 
@@ -52,55 +52,23 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	SAVING_BOOL = False
 	############################################
 
-
-
 	MODE = mode
 	CLASSIFIER = classifier
 	SENSOR = sensor
 	sensor_str='_'.join(SENSOR)
 
-
 	MODEL_NAME = './models/Freq-Encoding/bestmodel'+ \
 	        		'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pth'
-
-	# RESULT_NAME= './results/Freq-Encoding/accuracy'+ \
-	        		# '_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'.txt'
-
-
-	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + NN_model+'_'+MODE+'_'+sensor_str+'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_accuracy.txt'
-
-	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER +'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pkl'
-
-	if not os.path.exists('./models/Freq-Encoding'):
-		os.makedirs('./models/Freq-Encoding')
-
-
-	if not os.path.exists('./results/'+CLASSIFIER):
-		os.makedirs('./results/'+CLASSIFIER)
-
-	if not os.path.exists('./checkpoints/'+CLASSIFIER):
-		os.makedirs('./checkpoints/'+CLASSIFIER)
-
-	# if not os.path.exists('./results/Freq-Encoding'):
-	# 	os.makedirs('./results/Freq-Encoding')
-
 
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
-	BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+	subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
+	subject_data = []
+	for subject in subjects:
+		subject_data.append(EnableDataset(subject_list= [subject],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE))
 
-
-	if SAVING_BOOL:
-		save_object(BIO_train,SAVE_NAME)
-
-	with open(SAVE_NAME, 'rb') as input:
-	    BIO_train = pickle.load(input)
-
-	INPUT_NUM=BIO_train.input_numb
-
-	wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
-
+	INPUT_NUM=subject_data[0].input_numb
 
 	device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 	print('GPU USED?',torch.cuda.is_available())
@@ -124,37 +92,39 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	init_state = copy.deepcopy(model.state_dict())
 	init_state_opt = copy.deepcopy(optimizer.state_dict())
 
-
-	for batch, label, dtype in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
-		X = batch
-		y = label
-		types = dtype
-
 	accuracies =[]
 
 	ss_accuracies=[]
 	tr_accuracies=[]
 
-
 	class_accs = [0] * NUMB_CLASS
 
-
-	skf = KFold(n_splits = numfolds, shuffle = True)
+	# skf = KFold(n_splits = numfolds, shuffle = True)
+	skf = KFold(n_splits = len(subject_data), shuffle = True)
 	i = 0
-
 
 	train_class=trainclass(model,optimizer,DATA_LOAD_BOOL,device,criterion,MODEL_NAME)
 
 	tests=[]
 	preds=[]
-	for train_index, test_index in skf.split(X, y, types):
+	# for train_index, test_index in skf.split(X, y, types):
+	for train_index, test_index in skf.split(subject_data):
 
-		model.load_state_dict(init_state)
-		optimizer.load_state_dict(init_state_opt)
+		train_set = [subject_data[i] for i in train_index]
+		test_set = [subject_data[i] for i in test_index]
+		BIO_train = torch.utils.data.ConcatDataset(train_set)
+		wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
+		for batch, label, dtype in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
+			X_train = batch
+			y_train = label
+			types_train = dtype
 
-		X_train, X_test = X[train_index], X[test_index]
-		y_train, y_test = y[train_index], y[test_index]
-		types_train, types_test = types[train_index], types[test_index]
+		BIO_test = torch.utils.data.ConcatDataset(test_set)
+		wholeloader = DataLoader(BIO_test, batch_size=len(BIO_train))
+		for batch, label, dtype in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
+			X_test = batch
+			y_test = label
+			types_test = dtype
 
 		train_dataset = TensorDataset( X_train, y_train, types_train)
 		test_dataset = TensorDataset( X_test, y_test, types_test)
@@ -163,12 +133,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
 		print("######################Fold:{}#####################".format(i+1))
+
 		train_class.train(trainloader,num_epoch)
-
-		model.load_state_dict(torch.load(MODEL_NAME))
-
-
-		# print("Evaluate on test set")
 
 		accs,ss_accs,tr_accs,pred,test,class_acc=train_class.evaluate(testloader)
 		accuracies.append(accs)
@@ -178,16 +144,11 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		preds.extend(pred)
 		tests.extend(test)
 
-		accs, class_acc =train_class.evaluate(testloader)
-		accuracies.append(accs)
-		for i in range(len(class_accs)):
+		for i in range(len(class_acc)):
 			class_accs[i] += class_acc[i]
-
-
 
 		i +=1
 
-	print('saved on the results')
 	print("average:")
 	for i in range(len(class_accs)):
 		if class_accs[i] == 0:
@@ -195,24 +156,18 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		else:
 			print("Class {} accuracy: {}".format(i, class_accs[i]/numfolds))
 
+	print("Accuracies")
+	for item in accuracies:
+		print(item)
 
-	model.load_state_dict(torch.load('./models/bestmodel_BATCH_SIZE32_LR1e-05_WD0.001_EPOCH200_BAND10_HOP10.pth', map_location='cpu'))
+	print("Steady state")
+	for item in ss_accuracies:
+		print(item)
 
+	print("Translational")
+	for item in tr_accuracies:
+		print(item)
 
-	print('writing...')
-	with open(RESULT_NAME, 'w') as f:
-		f.write('total ')
-		for item in accuracies:
-			f.write("%s " % item)
-		f.write('\n')
-		f.write('steadystate ')
-		for item in ss_accuracies:
-			f.write("%s " % item)
-		f.write('\n')
-		f.write('transitional ')
-		for item in tr_accuracies:
-			f.write("%s " % item)
-	f.close()
 
 	conf= confusion_matrix(tests, preds)
 	print(conf)
@@ -225,9 +180,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 classifiers=['CNN']
 sensors=["imu","emg","goin"]
 sensor_str='_'.join(sensors)
-# modes = ['bilateral','ipsilateral','contralateral']
 modes = ['bilateral']
-# NN= 'RESNET'
 NN = 'bionet'
 for classifier in classifiers:
 	for i in range(3,4):
@@ -236,13 +189,5 @@ for classifier in classifiers:
 			for mode in modes:
 				print(classifier, sensor, mode)
 				confusion=run_classifier(mode=mode,classifier=classifier,sensor=sensor,NN_model=NN)
-
-with open('./results/'+classifiers[0]+'_'+sensor_str+'_'+modes[0]+'_'+'confusion.txt', 'w') as f:
-	for items in confusion:
-		for item in items:
-			f.write("%s " % item)
-
-		f.write('\n')
-f.close()
 
 

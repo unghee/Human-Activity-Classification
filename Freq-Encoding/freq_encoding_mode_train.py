@@ -110,7 +110,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		model = MyResNet18() # use resnet
 		model.conv1 = nn.Conv2d(INPUT_NUM, 64, kernel_size=5, stride=1, padding=2)
 		model.fc = nn.Linear(517 ,NUMB_CLASS)
-	else:	
+	else:
 		model = Network_modespecific(INPUT_NUM,NUMB_CLASS)
 	model = model.to(device)
 
