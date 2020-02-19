@@ -49,7 +49,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	BAND=10
 	HOP=10
 	# BAND=16,HOP=27
-	SAVING_BOOL = False
+	SAVING_BOOL = True
 	############################################
 
 	MODE = mode
@@ -58,15 +58,28 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	sensor_str='_'.join(SENSOR)
 
 	MODEL_NAME = './models/Freq-Encoding/bestmodel'+ \
-	        		'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pth'
+	        		'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_subjects.pth'
+
+	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + NN_model+'_'+MODE+'_'+sensor_str+'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_subjects_accuracy.txt'
+
+	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER +'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_subjects.pkl'
+
+
 
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
 	subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
-	subject_data = []
-	for subject in subjects:
-		subject_data.append(EnableDataset(subject_list= [subject],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE))
+	# subject_data = []
+	# for subject in subjects:
+	# 	subject_data.append(EnableDataset(subject_list= [subject],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE))
+
+
+	# if SAVING_BOOL:
+	# 	save_object(subject_data,SAVE_NAME)
+
+	with open(SAVE_NAME, 'rb') as input:
+	    subject_data = pickle.load(input)
 
 	INPUT_NUM=subject_data[0].input_numb
 
@@ -99,6 +112,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	class_accs = [0] * NUMB_CLASS
 
+	subject_numb = []
+
 	# skf = KFold(n_splits = numfolds, shuffle = True)
 	skf = KFold(n_splits = len(subject_data), shuffle = True)
 	i = 0
@@ -110,10 +125,16 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# for train_index, test_index in skf.split(X, y, types):
 	for train_index, test_index in skf.split(subject_data):
 
+		print(train_index,test_index)
+
+		model.load_state_dict(init_state)
+		optimizer.load_state_dict(init_state_opt)
+
 		train_set = [subject_data[i] for i in train_index]
 		test_set = [subject_data[i] for i in test_index]
 		BIO_train = torch.utils.data.ConcatDataset(train_set)
 		wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
+
 		for batch, label, dtype in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
 			X_train = batch
 			y_train = label
@@ -123,6 +144,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 		BIO_test = torch.utils.data.ConcatDataset(test_set)
 		wholeloader = DataLoader(BIO_test, batch_size=len(BIO_test))
+
 		for batch, label, dtype in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
 			X_test = batch
 			y_test = label
@@ -140,6 +162,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 		train_class.train(trainloader,num_epoch)
 
+		model.load_state_dict(torch.load(MODEL_NAME))
+
 		accs,ss_accs,tr_accs,pred,test,class_acc=train_class.evaluate(testloader)
 		accuracies.append(accs)
 		ss_accuracies.append(ss_accs)
@@ -148,8 +172,12 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		preds.extend(pred)
 		tests.extend(test)
 
-		for i in range(len(class_accs)):
-			class_accs[i] += class_acc[i]
+		subject_numb.append(test_index[0])
+
+		for j in range(len(class_accs)):
+			class_accs[j] += class_acc[j]
+
+		del  test_dataset, train_dataset, trainloader, testloader
 
 		i +=1
 
@@ -173,9 +201,30 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		print(item)
 
 
+	print('writing...')
+	with open(RESULT_NAME, 'w') as f:
+		f.write('total ')
+		for item in accuracies:
+			f.write("%s " % item)
+		f.write('\n')
+		f.write('steadystate ')
+		for item in ss_accuracies:
+			f.write("%s " % item)
+		f.write('\n')
+		f.write('transitional ')
+		for item in tr_accuracies:
+			f.write("%s " % item)
+		f.write('\n')
+		f.write('subject_numb ')
+		for item in subject_numb:
+			f.write("%s " % item)
+	f.close()
+
+
+
 	conf= confusion_matrix(tests, preds)
 	print(conf)
-	print(metrics.classification_report(tests, preds, digits=3))
+	print(classification_report(tests, preds, digits=3))
 
 	return conf
 

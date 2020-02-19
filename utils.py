@@ -125,7 +125,7 @@ class trainclass():
 	            tot_transitional += (types == 0).sum().item()
 
 	            for i in range(len(class_correct)):
-	                class_correct[i] += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), label == i)).sum().item()
+	                class_correct[i] += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), label.cpu() == i)).sum().item()
 	                class_total[i] += (label == i).sum().item()
 	    acc = correct/len(loader.dataset)
 	    for i in range(len(class_correct)):
