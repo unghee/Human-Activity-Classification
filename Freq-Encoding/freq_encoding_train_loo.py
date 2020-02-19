@@ -43,7 +43,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	LEARNING_RATE = 1e-5
 	WEIGHT_DECAY = 1e-3
 	NUMB_CLASS = 5
-	NUB_EPOCH= 200
+	NUB_EPOCH= 1
 	numfolds = 10
 	DATA_LOAD_BOOL = True
 	BAND=10
@@ -66,6 +66,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 
 
+	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER +'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'subjects.pkl'
+	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + NN_model+'_'+MODE+'_'+sensor_str+'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_subjects_accuracy.txt'
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
@@ -75,11 +77,12 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# 	subject_data.append(EnableDataset(subject_list= [subject],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE))
 
 
-	# if SAVING_BOOL:
-	# 	save_object(subject_data,SAVE_NAME)
+	if SAVING_BOOL:
+		save_object(subject_data,SAVE_NAME)
 
 	with open(SAVE_NAME, 'rb') as input:
 	    subject_data = pickle.load(input)
+
 
 	INPUT_NUM=subject_data[0].input_numb
 
@@ -124,6 +127,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	preds=[]
 	# for train_index, test_index in skf.split(X, y, types):
 	for train_index, test_index in skf.split(subject_data):
+		print(train_index,test_index)
 
 		print(train_index,test_index)
 
@@ -174,19 +178,21 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 		subject_numb.append(test_index[0])
 
+
 		for j in range(len(class_accs)):
 			class_accs[j] += class_acc[j]
 
 		del  test_dataset, train_dataset, trainloader, testloader
 
+
 		i +=1
 
-	print("average:")
-	for i in range(len(class_accs)):
-		if class_accs[i] == 0:
-			print("Class {} has no samples".format(i))
-		else:
-			print("Class {} accuracy: {}".format(i, class_accs[i]/numfolds))
+	# print("average:")
+	# for i in range(len(class_accs)):
+	# 	if class_accs[i] == 0:
+	# 		print("Class {} has no samples".format(i))
+	# 	else:
+	# 		print("Class {} accuracy: {}".format(i, class_accs[i]/numfolds))
 
 	print("Accuracies")
 	for item in accuracies:
@@ -218,6 +224,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		f.write('subject_numb ')
 		for item in subject_numb:
 			f.write("%s " % item)
+
 	f.close()
 
 
