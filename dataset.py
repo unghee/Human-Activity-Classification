@@ -40,39 +40,39 @@ class EnableDataset(Dataset):
             self.mode_specific=mode_specific
 
             exclude_list = [
-                # 'AB194_Circuit_009',
-                # 'AB194_Circuit_017',
-                # 'AB194_Circuit_018',
-                # 'AB194_Circuit_026',
-                # "AB194_Circuit_033",
-                # "AB194_Circuit_038",
-                # "AB193_Circuit_022",
-                # "AB193_Circuit_043",
-                # "AB192_Circuit_034",
-                'AB190_Circuit_013',
-                # 'AB190_Circuit_014',
-                # 'AB190_Circuit_037',
-                'AB190_Circuit_045',
-                # "AB191_Circuit_001",
-                'AB191_Circuit_002',
-                'AB191_Circuit_022',
-                # "AB191_Circuit_047",
-                # "AB191_Circuit_049",
-                "AB189_Circuit_004",
-                # "AB189_Circuit_024",
-                "AB189_Circuit_032",
-                # "AB189_Circuit_035",
-                # "AB188_Circuit_027",
-                "AB188_Circuit_032",
-                "AB186_Circuit_002",
-                # "AB186_Circuit_004",
-                # "AB186_Circuit_016",
-                # "AB186_Circuit_050",
-                # "AB185_Circuit_002",
-                "AB185_Circuit_008",
-                "AB185_Circuit_010",
-                "AB156_Circuit_005",
-                "AB156_Circuit_050"
+                # # 'AB194_Circuit_009',
+                # # 'AB194_Circuit_017',
+                # # 'AB194_Circuit_018',
+                # # 'AB194_Circuit_026',
+                # # "AB194_Circuit_033",
+                # # "AB194_Circuit_038",
+                # # "AB193_Circuit_022",
+                # # "AB193_Circuit_043",
+                # # "AB192_Circuit_034",
+                # 'AB190_Circuit_013',
+                # # 'AB190_Circuit_014',
+                # # 'AB190_Circuit_037',
+                # 'AB190_Circuit_045',
+                # # "AB191_Circuit_001",
+                # 'AB191_Circuit_002',
+                # 'AB191_Circuit_022',
+                # # "AB191_Circuit_047",
+                # # "AB191_Circuit_049",
+                # "AB189_Circuit_004",
+                # # "AB189_Circuit_024",
+                # "AB189_Circuit_032",
+                # # "AB189_Circuit_035",
+                # # "AB188_Circuit_027",
+                # "AB188_Circuit_032",
+                # "AB186_Circuit_002",
+                # # "AB186_Circuit_004",
+                # # "AB186_Circuit_016",
+                # # "AB186_Circuit_050",
+                # # "AB185_Circuit_002",
+                # "AB185_Circuit_008",
+                # "AB185_Circuit_010",
+                # "AB156_Circuit_005",
+                # "AB156_Circuit_050"
             ]
 
             for subjects in subject_list:
@@ -174,6 +174,7 @@ class EnableDataset(Dataset):
                             timestep_type.append(1)
                         else:
                             timestep_type.append(0)
+
                         if prevlabel is not None:
                             if float(phase) == phaselabel and float(trigger[0]) == prevlabel and float(trigger[2]) != 6 and float(trigger[0]) !=6:
                                 triggers.append(trigger)
@@ -199,6 +200,7 @@ class EnableDataset(Dataset):
                                 data = np.array(data)
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
+
                         else:
                             if float(trigger[2]) != 6 and float(trigger[0]) !=6:
 
@@ -227,9 +229,12 @@ class EnableDataset(Dataset):
                                 data = data.filter(regex=regex, axis=0)
                                 data = np.array(data)
 
+                                # if float(trigger[0]) == 4:
+                                #     print('***********',trigger[0])
+                                self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
-                    pdb.set_trace()
+                    # pdb.set_trace()
         print("load dataset done")
 
 
@@ -256,7 +261,7 @@ class EnableDataset(Dataset):
                 return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type
         else:
             img, label, timestep_type = self.dataset[index]
-            return img, np.array(label), timestep_type
+            return img, np.array(label), self.prev_label[index], timestep_type
 
     def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
         vals = []
