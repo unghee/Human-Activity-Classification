@@ -166,7 +166,7 @@ for i in range(128):
     argval = loc[i]
     if argval is None:
         continue
-    out += mask[:,:,argval[0], argval[1]]
+    out += mask[:,:,argval[0], argval[1]]*argmax[i]
     
 out = np.flipud(out/np.max(out))
 
@@ -181,7 +181,7 @@ ax[3].set_yticklabels([250, 150,50])
 #ax[0].set_yticks([0, 2, 4, 6, 8])
 #ax[0].set_yticklabels([250, 200, 150, 100, 50])
 #ax[3].set_ylabel("Hz")
-ax[3].title.set_text("Activation Map")
+ax[3].title.set_text("Average Activation")
 cbar2 = plt.colorbar(im2, ax=ax[3], aspect = 4)
 cbar2.ax.set_ylabel("Magnitude", rotation=270, labelpad = 33)
 
