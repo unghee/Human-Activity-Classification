@@ -174,6 +174,7 @@ class EnableDataset(Dataset):
                             timestep_type.append(1)
                         else:
                             timestep_type.append(0)
+
                         if prevlabel is not None:
                             if float(phase) == phaselabel and float(trigger[0]) == prevlabel and float(trigger[2]) != 6 and float(trigger[0]) !=6:
                                 triggers.append(trigger)
@@ -199,6 +200,7 @@ class EnableDataset(Dataset):
                                 data = np.array(data)
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
+
                         else:
                             if float(trigger[2]) != 6 and float(trigger[0]) !=6:
 
@@ -227,9 +229,12 @@ class EnableDataset(Dataset):
                                 data = data.filter(regex=regex, axis=0)
                                 data = np.array(data)
 
+                                # if float(trigger[0]) == 4:
+                                #     print('***********',trigger[0])
+                                self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
-                    # pdb.set_trace()
+
 
 
     def __len__(self):
@@ -255,7 +260,7 @@ class EnableDataset(Dataset):
                 return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type
         else:
             img, label, timestep_type = self.dataset[index]
-            return img, np.array(label), timestep_type
+            return img, np.array(label), self.prev_label[index], timestep_type
 
     def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
         vals = []
