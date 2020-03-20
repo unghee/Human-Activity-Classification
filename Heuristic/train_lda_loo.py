@@ -3,6 +3,8 @@ from torch.utils.data import Dataset, DataLoader
 
 from tqdm import tqdm # Displays a progress bar
 
+import sys,os
+sys.path.append('.')
 
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -26,7 +28,7 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 	sensor_str='_'.join(SENSOR)
 
 
-	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_accuracy.txt'
+	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_subjects_accuracy.txt'
 
 
 	if not os.path.exists('./results/'+CLASSIFIER):
@@ -59,6 +61,7 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 	accuracies =[]
 	ss_accuracies=[]
 	tr_accuracies=[]
+	subject_numb = []
 
 	i = 0
 	for train_index, test_index in skf.split(subject_data):
@@ -79,7 +82,6 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 		BIO_test = torch.utils.data.ConcatDataset(test_set)
 		wholeloader = DataLoader(BIO_test, batch_size=len(BIO_train))
 		for batch, label, dtype in tqdm(wholeloader):
-			print("POTATO")
 			X_test = batch
 			y_test = label
 			types_test = dtype
@@ -125,13 +127,13 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 		ss_accuracies.append(ss_acc) if tot_steady_state != 0 else "No steady state samples used"
 		tr_accuracies.append(tr_acc) if tot_transitional != 0 else "No transitional samples used"
 
-
+		subject_numb.append(test_index[0])
 
 		print("Total accuracy: {}".format(accuracy_score(y_test, y_pred)))
 		print("Total correct: {}, number: {}, accuracy: {}".format(correct,tot,tot_acc))
 		print("Steady-state correct: {}, number: {}, accuracy: {}".format(steady_state_correct,tot_steady_state,ss_acc))
 		print("Transistional correct: {}, number: {}, accuracy: {}".format(transitional_correct,tot_transitional,tr_acc))
-		print(accuracy_score(y_test, y_pred))
+		# print(accuracy_score(y_test, y_pred))
 
 		i +=1
 	print('********************SUMMARY*****************************')
@@ -141,6 +143,8 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 	print('TR Accuracy_,mean:', np.mean(tr_accuracies),'Accuracy_std: ', np.std(tr_accuracies))
 	# model.fit(X_train, y_train)
 	# total_accuracies = accuracies + ss_accuracies + tr_accuracies
+
+
 
 
 	print('writing...')
@@ -156,14 +160,18 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 		f.write('transitional ')
 		for item in tr_accuracies:
 			f.write("%s " % item)
+		f.write('\n')
+		f.write('subject_numb ')
+		for item in subject_numb:
+			f.write("%s " % item)
 	f.close()
 
 
 classifiers=['LDA']
 # sensors=["emg"]
 sensors=["imu","emg","goin"]
-# modes = ['ipsilateral']
-modes = ['bilateral','ipsilateral','contralateral']
+modes = ['bilateral']
+# modes = ['bilateral','ipsilateral','contralateral']
 for classifier in classifiers:
 	for i in range(3,4):
 		for combo in combinations(sensors,i):

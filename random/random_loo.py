@@ -38,7 +38,9 @@ DATA_LOAD_BOOL = True
 SAVING_BOOL = True
 
 MODE = 'bilateral'
+
 CLASSIFIER = 'Random'
+# CLASSIFIER = 'Random_modespecific'
 SENSOR = ["imu","emg","goin"]
 sensor_str='_'.join(SENSOR)
 

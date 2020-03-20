@@ -10,7 +10,7 @@ from torchvision import datasets, transforms
 from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset
 import torchvision.models as models
 
-from dataset import EnableDataset
+
 
 import pickle
 
@@ -24,6 +24,7 @@ import random
 import sys,os
 sys.path.append('.')
 
+from dataset import EnableDataset
 from utils import *
 from networks import *
 
@@ -43,7 +44,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	numfolds = 10
 	DATA_LOAD_BOOL = True
 
-	SAVING_BOOL = False
+	SAVING_BOOL = True
 	MODE_SPECIFIC_BOOL= True
 
 	BAND=10
@@ -68,7 +69,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_accuracy.txt'
 
-	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'mode_secific'+'.pkl'
+	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'mode_specific'+'.pkl'
 
 	if not os.path.exists('./models/Freq-Encoding'):
 		os.makedirs('./models/Freq-Encoding')
@@ -87,16 +88,18 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
-	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
-
-	BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 8),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
-
 
 	if SAVING_BOOL:
+		BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 		save_object(BIO_train,SAVE_NAME)
+	else:
+		with open(SAVE_NAME, 'rb') as input:
+		    BIO_train = pickle.load(input)
+	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 8),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 
-	# with open(SAVE_NAME, 'rb') as input:
-	#     BIO_train = pickle.load(input)
+
+		
+
 
 	INPUT_NUM=BIO_train.input_numb
 
