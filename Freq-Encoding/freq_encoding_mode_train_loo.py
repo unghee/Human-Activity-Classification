@@ -7,7 +7,7 @@ from torch import nn
 from torch import optim
 import torch.nn.functional as F
 from torchvision import datasets, transforms
-from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset
+from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset,  ConcatDataset
 import torchvision.models as models
 
 from dataset import EnableDataset
@@ -66,9 +66,9 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	        		# '_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'.txt'
 
 
-	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_accuracy.txt'
+	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_subjects_accuracy.txt'
 
-	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'mode_secific'+'.pkl'
+	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'mode_secific'+'subjects.pkl'
 
 	if not os.path.exists('./models/Freq-Encoding'):
 		os.makedirs('./models/Freq-Encoding')
@@ -87,21 +87,19 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
-	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
+	subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
+	subject_data = []
+	for subject in subjects:
+		subject_data.append(EnableDataset(subject_list= [subject],data_range=(1, 8),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 
-	BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 8),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 
-
-	if SAVING_BOOL:
-		save_object(BIO_train,SAVE_NAME)
+	# if SAVING_BOOL:
+	# 	save_object(subject_data,SAVE_NAME)
 
 	# with open(SAVE_NAME, 'rb') as input:
-	#     BIO_train = pickle.load(input)
+	#     subject_data = pickle.load(input)
 
-	INPUT_NUM=BIO_train.input_numb
-
-	wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
-
+	INPUT_NUM=subject_data[0].input_numb
 
 	device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 	print('GPU USED?',torch.cuda.is_available())
@@ -123,12 +121,6 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	one_hot_embed= torch.eye(5)
 
-	for batch, label, dtype, prevlabels  in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
-		X = batch
-		y = label
-		types = dtype
-		prevlabel = prevlabels
-
 	accuracies =[]
 	ss_accuracies=[]
 	tr_accuracies=[]
@@ -140,15 +132,41 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	train_class=trainclass(model,optimizer,DATA_LOAD_BOOL,device,criterion,MODEL_NAME)
 
-	for train_index, test_index in skf.split(X, y):
+	for train_index, test_index in skf.split(subject_data):
+		print(train_index,test_index)
+
+		train_set = [subject_data[i] for i in train_index]
+		test_set = [subject_data[i] for i in test_index]
+		BIO_train = torch.utils.data.ConcatDataset(train_set)
+		wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
+		for batch, label, dtype, prevlabel in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
+			X_train = batch
+			y_train = label
+			types_train = dtype
+			prevlabel_train = prevlabel
+		BIO_train = None
+		train_set = None
+
+		BIO_test = torch.utils.data.ConcatDataset(test_set)
+		wholeloader = DataLoader(BIO_test, batch_size=len(BIO_test))
+		for batch, label, dtype, prevlabel in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
+			X_test = batch
+			y_test = label
+			types_test = dtype
+			prevlabel_test = prevlabel
+		BIO_test = None
+		test_set = None
+
+		train_dataset = TensorDataset( X_train, y_train, types_train)
+		test_dataset = TensorDataset( X_test, y_test, types_test)
+
+		trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+		testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
 		model.load_state_dict(init_state)
 		optimizer.load_state_dict(init_state_opt)
 
-		X_train, X_test = X[train_index], X[test_index]
-		y_train, y_test = y[train_index], y[test_index]
-		types_train, types_test = types[train_index], types[test_index]
-		onehot_train, onehot_test = one_hot_embed[prevlabel[train_index]], one_hot_embed[prevlabel[test_index]]
+		onehot_train, onehot_test = one_hot_embed[prevlabel_train], one_hot_embed[prevlabel_test]
 
 
 		train_dataset = TensorDataset( X_train, y_train, types_train,onehot_train)

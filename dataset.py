@@ -234,8 +234,7 @@ class EnableDataset(Dataset):
                                 self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
-                    # pdb.set_trace()
-        print("load dataset done")
+
 
 
     def __len__(self):
@@ -249,7 +248,7 @@ class EnableDataset(Dataset):
                     img = F.to_pil_image(np.uint8(img))
                     img = self.transform(img)
                     img = np.array(img)
-                    pdb.set_trace()
+                    # pdb.set_trace()
                 return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type, prev__label
 
             else:
@@ -293,7 +292,7 @@ class EnableDataset(Dataset):
                 ## plotting spectro and melspectro
                 # if x == 0:
                 #     plt.figure(figsize=(10,8))
-                #     plt.rcParams['font.family'] = 'Times New Roman'  
+                #     plt.rcParams['font.family'] = 'Times New Roman'
                 #     plt.rcParams.update({'font.size': 31})
                 #     # D = librosa.amplitude_to_db(np.abs(librosa.stft(row)), ref=np.max)
                 #     # librosa.display.specshow(D, x_axis='s',y_axis='mel',sr=fs,fmax=fs/2,cmap='viridis')
@@ -313,7 +312,7 @@ class EnableDataset(Dataset):
                 #     librosa.display.specshow(S_dB,x_axis='s',hop_length=10,y_axis='linear',sr=fs,fmax=fs/2,cmap='viridis')
                 #     plt.colorbar(format='%+2.0f dB')
 
-                #     locs, labels = plt.xticks()  
+                #     locs, labels = plt.xticks()
                 #     plt.xticks(np.array([0.25,0.5,0.75]), ['0.25','0.5','0.75'])
                 #     plt.show()
                 #     pdb.set_trace()
