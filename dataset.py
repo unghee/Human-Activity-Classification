@@ -234,8 +234,7 @@ class EnableDataset(Dataset):
                                 self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
-                    # pdb.set_trace()
-        print("load dataset done")
+
 
 
     def __len__(self):
@@ -249,7 +248,7 @@ class EnableDataset(Dataset):
                     img = F.to_pil_image(np.uint8(img))
                     img = self.transform(img)
                     img = np.array(img)
-                    pdb.set_trace()
+                    # pdb.set_trace()
                 return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type, prev__label
 
             else:
@@ -294,34 +293,35 @@ class EnableDataset(Dataset):
                 # logspec_delta = librosa.feature.delta(logspec_full) # add derivative
 
                 ## plotting spectro and melspectro
-                if x == 30:
-                    plt.figure(figsize=(10,8))
-                    plt.rcParams['font.family'] = 'Times New Roman'  
-                    plt.rcParams.update({'font.size': 31})
-                    # D = librosa.amplitude_to_db(np.abs(librosa.stft(row)), ref=np.max)
-                    # librosa.display.specshow(D, x_axis='s',y_axis='mel',sr=fs,fmax=fs/2,cmap='viridis')
-                    f, t, Sxx=signal.spectrogram(row, fs, window=signal.windows.hamming(hop_length*2, True),nfft=hop_length*2, noverlap=hop_length)
-                    # plt.imshow(spec,aspect='auto',origin='lower',extent=[times.min(),times.max(),freqs.min(),freqs.max()])
-                    plt.pcolormesh(t, f, 10*np.log10(Sxx),vmin=-80, vmax=0)
-                    # plt.pcolormesh(t, f, Sxx,norm = matplotlib.colors.Normalize(0,1))
-                    plt.colorbar(format='%+2.0f dB')
-                    plt.xlabel('Time (s)')
-                    plt.ylabel('Hz')
-                    # plt.title('Linear-frequency power spectrogram')
-                    plt.yticks(np.array([0,50,100,150,200]), ['0','50','100','150','200'])
-                    # plt.savefig('./spectro.png')
-                    plt.show()
+#                 if x == 30:
+#                     plt.figure(figsize=(10,8))
+#                     plt.rcParams['font.family'] = 'Times New Roman'  
+#                     plt.rcParams.update({'font.size': 31})
+#                     # D = librosa.amplitude_to_db(np.abs(librosa.stft(row)), ref=np.max)
+#                     # librosa.display.specshow(D, x_axis='s',y_axis='mel',sr=fs,fmax=fs/2,cmap='viridis')
+#                     f, t, Sxx=signal.spectrogram(row, fs, window=signal.windows.hamming(hop_length*2, True),nfft=hop_length*2, noverlap=hop_length)
+#                     # plt.imshow(spec,aspect='auto',origin='lower',extent=[times.min(),times.max(),freqs.min(),freqs.max()])
+#                     plt.pcolormesh(t, f, 10*np.log10(Sxx),vmin=-80, vmax=0)
+#                     # plt.pcolormesh(t, f, Sxx,norm = matplotlib.colors.Normalize(0,1))
+#                     plt.colorbar(format='%+2.0f dB')
+#                     plt.xlabel('Time (s)')
+#                     plt.ylabel('Hz')
+#                     # plt.title('Linear-frequency power spectrogram')
+#                     plt.yticks(np.array([0,50,100,150,200]), ['0','50','100','150','200'])
+#                     # plt.savefig('./spectro.png')
+#                     plt.show()
 
-                    plt.figure(figsize=(10,4))
-                    S_dB = librosa.amplitude_to_db(melspec_full, ref=np.max)
-                    librosa.display.specshow(S_dB,x_axis='s',hop_length=10,y_axis='linear',sr=fs,fmax=fs/2,cmap='viridis')
-                    plt.colorbar(format='%+2.0f dB')
+#                     plt.figure(figsize=(10,4))
+#                     S_dB = librosa.amplitude_to_db(melspec_full, ref=np.max)
+#                     librosa.display.specshow(S_dB,x_axis='s',hop_length=10,y_axis='linear',sr=fs,fmax=fs/2,cmap='viridis')
+#                     plt.colorbar(format='%+2.0f dB')
 
-                    locs, labels = plt.xticks()  
-                    plt.yticks(np.array([0,50,100,150,200]), ['0','50','100','150','200'])
-                    plt.xticks(np.array([0.25,0.5,0.75]), ['0.25','0.50','0.75'])
-                    plt.show()
-                    pdb.set_trace()
+#                     locs, labels = plt.xticks()  
+#                     plt.yticks(np.array([0,50,100,150,200]), ['0','50','100','150','200'])
+#                     plt.xticks(np.array([0.25,0.5,0.75]), ['0.25','0.50','0.75'])
+#                     plt.show()
+#                     pdb.set_trace()
+
 
                 vals.append(logspec_full)
         return vals
