@@ -260,7 +260,7 @@ class EnableDataset(Dataset):
                 return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type
         else:
             img, label, timestep_type = self.dataset[index]
-            if self.model_type== "Random_modespecific" or "Random":
+            if self.model_type== "Random_modespecific" or self.model_type=="Random":
                 return img, np.array(label), self.prev_label[index], timestep_type
             else:
                 return img, np.array(label), timestep_type
