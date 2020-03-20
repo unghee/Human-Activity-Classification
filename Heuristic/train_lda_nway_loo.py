@@ -6,7 +6,7 @@ from tqdm import tqdm # Displays a progress bar
 
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from dataset import EnableDataset
+
 
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, StratifiedKFold
@@ -18,13 +18,14 @@ from sklearn.svm import SVC
 import sys,os
 sys.path.append('.')
 from utils import *
+from dataset import EnableDataset
 
 
 
 ############################
 MODE = 'bilateral'
-CLASSIFIER = 'SVM'
-SAVING_BOOL = True
+CLASSIFIER = 'LDA'
+SAVING_BOOL = False
 sensor=["imu","emg","goin"]
 
 
@@ -33,7 +34,7 @@ sensor=["imu","emg","goin"]
 SENSOR = sensor
 sensor_str='_'.join(SENSOR)
 
-RESULT_NAME= './results/mode_specific/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_accuracy_nway_subject.txt'
+RESULT_NAME= './results/' + CLASSIFIER +'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_accuracy_nway_subject.txt'
 
 
 SAVE_NAME= './checkpoints/mode_specfic_subject.pkl'
@@ -57,21 +58,22 @@ BIO_trains_len=0
 k = 0
 subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
 # subjects = ['156']
-for i in range(1,len_class+1):
-	for j in range(1,len_phase+1):
-		subject_data = []
-		for subject in subjects:
-			subject_data.append(EnableDataset(subject_list= [subject],phaselabel=j,prevlabel=i,model_type='LDA',sensors=SENSOR,mode=MODE))
-		BIO_trains.append(subject_data)
-		k +=1
-		print(k)
 
 if SAVING_BOOL:
+	for i in range(1,len_class+1):
+		for j in range(1,len_phase+1):
+			subject_data = []
+			for subject in subjects:
+				subject_data.append(EnableDataset(subject_list= [subject],phaselabel=j,prevlabel=i,model_type='LDA',sensors=SENSOR,mode=MODE))
+			BIO_trains.append(subject_data)
+			k +=1
+			print(k)
 	save_object(BIO_trains,SAVE_NAME)
 
-
-# with open(SAVE_NAME, 'rb') as input:
-# 	 BIO_trains = pickle.load(input)
+else:
+	
+	with open(SAVE_NAME, 'rb') as input:
+		 BIO_trains = pickle.load(input)
 
 
 models=[]
@@ -97,6 +99,8 @@ accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
 ss_accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
 tr_accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
 
+subject_numb = []
+
 tot_numb_mat = np.zeros((10,20))
 ss_numb_mat = np.zeros((10,20))
 tr_numb_mat = np.zeros((10,20))
@@ -110,6 +114,8 @@ tr_mat = np.zeros((10,20))
 numfolds = 10
 # kf = KFold(n_splits = numfolds, shuffle = True)
 skf = KFold(n_splits = numfolds, shuffle = True)
+
+data_lens=0
 
 for i in range(1, len_class+1):
 	for j in range(1,len_phase+1):
@@ -126,7 +132,7 @@ for i in range(1, len_class+1):
 		for train_index, test_index in skf.split(BIO_trains[k]):
 			print(train_index,test_index)
 			print("######################Fold:{}#####################".format(m+1))
-
+			subject_data=BIO_trains[k] 
 			train_set = [subject_data[i] for i in train_index]
 			test_set = [subject_data[i] for i in test_index]
 			BIO_train = torch.utils.data.ConcatDataset(train_set)
@@ -146,6 +152,8 @@ for i in range(1, len_class+1):
 				types_test = dtype
 			BIO_test = None
 			test_set = None
+
+			data_lens += len(X_train) + len(X_test)
 
 			if CLASSIFIER == 'LDA':
 				scale_PCA.fit(X_train)
@@ -190,6 +198,7 @@ for i in range(1, len_class+1):
 			ss_mat[m,k] = steady_state_correct
 			tr_mat[m,k] = transitional_correct
 
+
 			m +=1
 		k +=1
 		del pca, X_train, X_test, y_train, y_test
@@ -204,7 +213,7 @@ ss_accuracies=np.sum(ss_mat,axis=1)/ss_numbs
 tr_accuracies=np.sum(tr_mat,axis=1)/tr_numbs
 
 print('total number of classifiers: ' ,k)
-print('total number of data: ' ,BIO_trains_len)
+print('total number of data: ' ,data_lens )
 # print('Accuracy_total:', correct/BIO_trains_len)
 # print('Steady-state:', steady_state_correct/tot_steady_state )
 # print('Transistional:', transitional_correct/tot_transitional)

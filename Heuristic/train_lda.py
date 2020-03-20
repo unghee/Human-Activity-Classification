@@ -6,7 +6,7 @@ from tqdm import tqdm # Displays a progress bar
 
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from dataset import EnableDataset
+
 
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, StratifiedKFold,train_test_split, cross_val_score
@@ -14,7 +14,10 @@ from sklearn import preprocessing
 from sklearn.decomposition import PCA, sparse_encode
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
-import os
+import os, sys
+sys.path.append('.')
+
+from dataset import EnableDataset
 
 from itertools import combinations
 

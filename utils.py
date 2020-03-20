@@ -174,7 +174,7 @@ class trainclass():
 	    print("Evaluation accuracy: {}".format(acc))
 	    print("Steady-state accuracy: {}".format(ss_acc))
 	    print("Transistional accuracy: {}".format(tr_acc))
-	    return acc, ss_acc, tr_acc, corr
+	    return acc, ss_acc, tr_acc
 
 def save_object(obj, filename):
     with open(filename, 'wb') as output:  # Overwrites any existing file.

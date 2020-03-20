@@ -6,7 +6,7 @@ from tqdm import tqdm # Displays a progress bar
 
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from dataset import EnableDataset
+
 
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, StratifiedKFold
@@ -18,6 +18,7 @@ from sklearn.svm import SVC
 import sys,os
 sys.path.append('.')
 from utils import *
+from dataset import EnableDataset
 
 
 

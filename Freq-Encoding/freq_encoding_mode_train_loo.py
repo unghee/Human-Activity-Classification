@@ -10,7 +10,7 @@ from torchvision import datasets, transforms
 from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset,  ConcatDataset
 import torchvision.models as models
 
-from dataset import EnableDataset
+# from dataset import EnableDataset
 
 import pickle
 
@@ -23,6 +23,8 @@ import random
 
 import sys,os
 sys.path.append('.')
+
+from dataset import EnableDataset
 
 from utils import *
 from networks import *
@@ -43,7 +45,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	numfolds = 10
 	DATA_LOAD_BOOL = True
 
-	SAVING_BOOL = False
+	SAVING_BOOL = True
 	MODE_SPECIFIC_BOOL= True
 
 	BAND=10
@@ -66,7 +68,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	        		# '_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'.txt'
 
 
-	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_subjects_accuracy.txt'
+	# RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_subjects_accuracy.txt'
+	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + NN_model+'_'+MODE+'_'+sensor_str+'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_mode_specific_subjects_accuracy.txt'
 
 	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'mode_secific'+'subjects.pkl'
 
@@ -88,16 +91,17 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	print("Loading datasets...")
 
 	subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
-	subject_data = []
-	for subject in subjects:
-		subject_data.append(EnableDataset(subject_list= [subject],data_range=(1, 8),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 
+	if SAVING_BOOL:
+		subject_data = []
+		for subject in subjects:
+			subject_data.append(EnableDataset(subject_list= [subject],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL))
 
-	# if SAVING_BOOL:
-	# 	save_object(subject_data,SAVE_NAME)
+		save_object(subject_data,SAVE_NAME)
 
-	# with open(SAVE_NAME, 'rb') as input:
-	#     subject_data = pickle.load(input)
+	else:
+		with open(SAVE_NAME, 'rb') as input:
+			subject_data = pickle.load(input)
 
 	INPUT_NUM=subject_data[0].input_numb
 
@@ -124,6 +128,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	accuracies =[]
 	ss_accuracies=[]
 	tr_accuracies=[]
+	subject_numb = []
 
 
 	skf = KFold(n_splits = numfolds, shuffle = True)
@@ -134,6 +139,9 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	for train_index, test_index in skf.split(subject_data):
 		print(train_index,test_index)
+
+		model.load_state_dict(init_state)
+		optimizer.load_state_dict(init_state_opt)
 
 		train_set = [subject_data[i] for i in train_index]
 		test_set = [subject_data[i] for i in test_index]
@@ -186,6 +194,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		ss_accuracies.append(ss_accs)
 		tr_accuracies.append(tr_accs)
 
+		subject_numb.append(test_index[0])
+
 		i +=1
 
 	print('saved on the results')
@@ -209,6 +219,10 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		f.write('\n')
 		f.write('transitional ')
 		for item in tr_accuracies:
+			f.write("%s " % item)
+		f.write('\n')
+		f.write('subject_numb ')
+		for item in subject_numb:
 			f.write("%s " % item)
 	f.close()
 
