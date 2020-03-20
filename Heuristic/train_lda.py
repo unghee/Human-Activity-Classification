@@ -168,7 +168,7 @@ classifiers=['LDA']
 # sensors=["emg"]
 sensors=["imu","emg","goin"]
 # modes = ['ipsilateral']
-modes = ['bilateral','ipsilateral','contralateral']
+modes = ['bilateral']
 for classifier in classifiers:
 	for i in range(3,4):
 		for combo in combinations(sensors,i):
