@@ -50,7 +50,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	BAND=10
 	HOP=10
 	# BAND=16,HOP=27
-	SAVING_BOOL = False
+	SAVING_BOOL = True
 	############################################
 
 
