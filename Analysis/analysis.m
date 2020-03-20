@@ -265,7 +265,7 @@ NAME = {'Generic\newline{Dep.}', 'Mode\newline{Dep.}','Generic\newline{Indep.}',
 
 fh3=figure
 
-set(gcf, 'Position',  [100, 100, 600, 1000])
+set(gcf, 'Position',  [100, 100, 700, 1000])
 subplot(3,1,1)
 
 h=bar(y_overall ,'LineWidth',1.5,'BarWidth', 0.95);
@@ -301,7 +301,7 @@ er.LineStyle = 'none';
 er.LineWidth = 2.5;
 ylabel('Overall Error (%)')
 
-legend({'LDA','SVM','LAP-NET'},'Box','off','Location','northwest')
+legend({'LDA','SVM','LIR-NET'},'Box','off','Location','northwest')
 box off
 names = NAME;
 set(gca, 'FontSize', 20,'Fontname','Times','xticklabel',names) 
