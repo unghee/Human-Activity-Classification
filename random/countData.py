@@ -1,3 +1,6 @@
+import sys,os
+sys.path.append('.')
+sys.path.append('../')
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm # Displays a progress bar
@@ -9,7 +12,7 @@ import torch.nn.functional as F
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset
 
-
+from dataset import EnableDataset
 
 import pickle
 
@@ -20,10 +23,6 @@ import os
 import random
 
 
-import sys,os
-sys.path.append('.')
-
-from dataset import EnableDataset
 from utils import *
 from networks import *
 
@@ -38,69 +37,83 @@ DATA_LOAD_BOOL = True
 SAVING_BOOL = True
 
 MODE = 'bilateral'
-
-CLASSIFIER = 'Random'
-# CLASSIFIER = 'Random_modespecific'
+CLASSIFIER = 'Random_modespecific'
 SENSOR = ["imu","emg","goin"]
 sensor_str='_'.join(SENSOR)
 
-RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + '_subjects_accuracy.txt'
+RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + '_accuracy.txt'
 
 if not os.path.exists('./results/'+CLASSIFIER):
 		os.makedirs('./results/'+CLASSIFIER)
 
-# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 10),bands=10,hop_length=10,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
-# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 4),bands=10,hop_length=10,mode_specific = True,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=10,hop_length=10,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 4),bands=10,hop_length=10,mode_specific = True,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
 
-subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
+# save_object(BIO_train,'count_Data_features.pkl')
 
-if SAVING_BOOL:
-	subject_data = []
-	for subject in subjects:
-		subject_data.append(EnableDataset(subject_list= [subject],model_type=CLASSIFIER,sensors=SENSOR,mode=MODE))
+# with open('count_Data_features.pkl', 'rb') as input:
+# 	   BIO_train = pickle.load(input)
 
-	save_object(subject_data,'./checkpoints/count_Data_features.pkl')	
-else:
-	with open('./checkpoints/count_Data_features.pkl', 'rb') as input:
-		   subject_data = pickle.load(input)
+vals = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
+# vals = [[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]]
+# vals = [[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]]
+for img, labels,trigger,_ in BIO_train:
+    # vals[trigger.astype(int)][labels.astype(int)]+=1
+    vals[int(trigger)-1][int(labels)-1]+=1
+    # if int(trigger) == 4:
+    # 	print(trigger)
+vals = np.array(vals)
 
 
 
+if CLASSIFIER =='Random_modespecific':
+	overall_acc= np.sum(np.max(vals,0))/np.sum(vals)
 
-skf = KFold(n_splits = numfolds, shuffle = True)
-i = 0
+	print(overall_acc)
+
+	if np.max(vals).all() == np.diag(vals).all():
+		ss_acc = 1
+		tr_acc = 0 
+
+elif CLASSIFIER =="Random":
+	overall_acc= np.sum(vals[:,0])/np.sum(vals)
+
+	
+	ss_acc = vals[0][0]/np.sum(np.diag(vals))
+	tr_acc = np.sum(vals[1:,0])/(np.sum(vals)-np.sum(np.diag(vals)))
+
+
+	print('overall.{}, ss.{}, tr,{}'.format(overall_acc,ss_acc,tr_acc))
+
+
+del vals
+
+wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
+
+
+for batch, label, trigger,dtype in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
+	X = batch
+	y = label
+	tri = trigger
+	types = dtype
+
+	skf = KFold(n_splits = numfolds, shuffle = True)
+	i = 0
 
 overall_accs = []
 ss_accs = []
 tr_accs = []
 
-for train_index, test_index in skf.split(subject_data):
-
-	print(train_index, test_index)
-
+for train_index, test_index in skf.split(X, y):
 	train_vals = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
 	test_vals = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
 
 	print("######################Fold:{}#####################".format(i+1))
 
-	train_set = [subject_data[i] for i in train_index]
-	test_set = [subject_data[i] for i in test_index]
-	BIO_train = torch.utils.data.ConcatDataset(train_set)
-	wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
-	for batch, label, trigger,dtype in tqdm(wholeloader):
-		X_train = batch
-		y_train = label
-		types_train = dtype
-		trigger_train = trigger
-
-	BIO_test = torch.utils.data.ConcatDataset(test_set)
-	wholeloader = DataLoader(BIO_test, batch_size=len(BIO_train))
-	for batch, label, trigger,dtype in tqdm(wholeloader):
-		X_test = batch
-		y_test = label
-		types_test = dtype
-		trigger_test = trigger
-
+	X_train, X_test = X[train_index], X[test_index]
+	y_train, y_test = y[train_index], y[test_index]
+	trigger_train, trigger_test = tri[train_index], tri[test_index]
+	types_train, types_test = types[train_index], types[test_index]
 
 	train_dataset = TensorDataset( X_train, y_train, trigger_train)
 	test_dataset = TensorDataset( X_test, y_test, trigger_test)

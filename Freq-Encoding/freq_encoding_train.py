@@ -14,6 +14,7 @@ from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDa
 import pickle
 
 from sklearn.model_selection import KFold, StratifiedKFold,ShuffleSplit ,train_test_split
+
 from sklearn.metrics import confusion_matrix, classification_report
 
 from PIL import Image
@@ -133,7 +134,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	tr_accuracies=[]
 
 
-	class_accs = [0] * NUMB_CLASS
+	# class_accs = [0] * NUMB_CLASS
+	class_acc_list=[]
 
 
 	skf = KFold(n_splits = numfolds, shuffle = True)
@@ -175,22 +177,11 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		preds.extend(pred)
 		tests.extend(test)
 
-		# accs, class_acc =train_class.evaluate(testloader)
-		# accuracies.append(accs)
-		# for i in range(len(class_accs)):
-		# 	class_accs[i] += class_acc[i]
-
-
+		class_acc_list.append(class_acc)
 
 		i +=1
 
 	print('saved on the results')
-	print("average:")
-	for i in range(len(class_accs)):
-		if class_accs[i] == 0:
-			print("Class {} has no samples".format(i))
-		else:
-			print("Class {} accuracy: {}".format(i, class_accs[i]/numfolds))
 
 
 	# model.load_state_dict(torch.load('./models/bestmodel_BATCH_SIZE32_LR1e-05_WD0.001_EPOCH200_BAND10_HOP10.pth', map_location='cpu'))
@@ -209,6 +200,15 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		f.write('transitional ')
 		for item in tr_accuracies:
 			f.write("%s " % item)
+
+		for j in range(0,5):
+			f.write('\n')
+			f.write('class {} '.format(j))
+			for m in range(0,numfolds):
+				f.write("%s " % class_acc_list[m][j])
+
+
+
 	f.close()
 
 	conf= confusion_matrix(tests, preds)
@@ -225,7 +225,7 @@ sensor_str='_'.join(sensors)
 # modes = ['bilateral','ipsilateral','contralateral']
 modes = ['bilateral']
 # NN= 'RESNET'
-NN = 'bionet'
+NN = 'LAPNET'
 for classifier in classifiers:
 	for i in range(3,4):
 		for combo in combinations(sensors,i):
