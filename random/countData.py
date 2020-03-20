@@ -1,3 +1,6 @@
+import sys,os
+sys.path.append('.')
+sys.path.append('../')
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm # Displays a progress bar
@@ -19,9 +22,6 @@ import copy
 import os
 import random
 
-
-import sys,os
-sys.path.append('.')
 
 from utils import *
 from networks import *
@@ -46,13 +46,13 @@ RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + '_accuracy.txt'
 if not os.path.exists('./results/'+CLASSIFIER):
 		os.makedirs('./results/'+CLASSIFIER)
 
-# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 10),bands=10,hop_length=10,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
-# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 4),bands=10,hop_length=10,mode_specific = True,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=10,hop_length=10,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 4),bands=10,hop_length=10,mode_specific = True,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
 
 # save_object(BIO_train,'count_Data_features.pkl')
 
-with open('count_Data_features.pkl', 'rb') as input:
-	   BIO_train = pickle.load(input)
+# with open('count_Data_features.pkl', 'rb') as input:
+# 	   BIO_train = pickle.load(input)
 
 vals = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
 # vals = [[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]]
