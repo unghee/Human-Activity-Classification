@@ -122,17 +122,19 @@ class LSTM(nn.Module):
         self.n_classes = n_classes
         self.drop_prob = drop_prob
         self.n_channels = n_channels
+        self.gpubool=gpubool
         
         self.lstm  = nn.LSTM(n_channels, n_hidden, n_layers, dropout=self.drop_prob,batch_first=True)
         self.fc = nn.Linear(n_hidden, n_classes)
         self.dropout = nn.Dropout(drop_prob)
-        self.gpubool=gpubool
+
         
     def forward(self, x, hidden,batch_size):
         
         # x = x.permute(1, 0, 2)
         # batch_size = x.size(0)
-        x = x.permute(0, 2, 1)
+        x = x.permute(0, 2, 1).float()
+        x = x.float()
         x, hidden = self.lstm(x, hidden)
         x = self.dropout(x)    
         x = x.contiguous().view(-1, self.n_hidden)
@@ -147,11 +149,12 @@ class LSTM(nn.Module):
         weight = next(self.parameters()).data
         
         if (self.gpubool):
-            hidden = (weight.new(self.n_layers, batch_size, self.n_hidden).zero_().cuda(),
-                  weight.new(self.n_layers, batch_size, self.n_hidden).zero_().cuda())
+            hidden = (weight.new(self.n_layers, batch_size, self.n_hidden).zero_().cuda().float(),
+                  weight.new(self.n_layers, batch_size, self.n_hidden).zero_().cuda().float())
         else:
-            hidden = (weight.new(self.n_layers, batch_size, self.n_hidden).zero_(),
-                      weight.new(self.n_layers, batch_size, self.n_hidden).zero_())
+            hidden = (weight.new(self.n_layers, batch_size, self.n_hidden).zero_().float(),
+                      weight.new(self.n_layers, batch_size, self.n_hidden).zero_().float())
+
         return hidden   
 
 

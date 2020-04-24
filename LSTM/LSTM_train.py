@@ -100,8 +100,10 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 
 	device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
+	# device = "cpu"
 	print('GPU USED?',torch.cuda.is_available())
 	GPU_BOOL=torch.cuda.is_available()
+	# GPU_BOOL =False
 
 
 	model = LSTM(n_channels=INPUT_NUM,n_classes=NUMB_CLASS,gpubool=GPU_BOOL)
@@ -156,25 +158,24 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	    val_history=[]
 	    print("Start training...")
 	    model.train()
+
 	    pre_loss=10000
 	    for i in range(num_epoch):
 	        running_loss = []
 	        h = model.init_hidden(BATCH_SIZE)  
 	        for batch, label, types in tqdm(loader,disable=DATA_LOAD_BOOL):
-	            batch = batch.to(device)
-	            label = label.to(device)
-	            label = label -1 # indexing start from 1 (removing sitting conditon)
-	            h = tuple([e.data for e in h])
-	            optimizer.zero_grad()
-	            pred,h = model(batch,h,BATCH_SIZE)
-	            loss = criterion(pred, label)
-	            running_loss.append(loss.item())
-	            loss.backward()
-	            optimizer.step()
-
+	        	batch = batch.to(device)
+	        	label = label.to(device)
+	        	label = label -1 # indexing start from 1 (removing sitting conditon)
+	        	h = tuple([e.data for e in h])
+	        	optimizer.zero_grad()
+	        	pred,h = model(batch,h,BATCH_SIZE)
+	        	loss = criterion(pred, label)
+	        	running_loss.append(loss.item())
+	        	loss.backward()
+	        	optimizer.step()
 	        loss_mean= np.mean(running_loss)
 	        loss_history.append(loss_mean)
-	        # val_acc =0
 	        val_acc = evaluate_LSTM(model, valloader)
 	        if loss_mean< pre_loss:
 	        	pre_loss = loss_mean
