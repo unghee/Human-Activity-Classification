@@ -133,12 +133,18 @@ class LSTM(nn.Module):
         
         # x = x.permute(1, 0, 2)
         # batch_size = x.size(0)
-        x = x.permute(0, 2, 1).float()
+        x = x.permute(0, 2, 1).float() # ([32, 500, 52])
+        num_timestep = x.size(1)
         x = x.float()
-        x, hidden = self.lstm(x, hidden)
+        x, hidden = self.lstm(x, hidden) # ([32, 500, 52])
         x = self.dropout(x)    
         x = x.contiguous().view(-1, self.n_hidden)
-        out = self.fc(x)
+        out = self.fc(x) #torch.Size([16000, 5])
+        # out = out.view(batch_size, -1)
+        out = out.view(batch_size,num_timestep, -1)
+        # out = out[:,-1]
+        out = out[:,-1,:]
+
         
         return out, hidden
     
