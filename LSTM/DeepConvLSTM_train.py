@@ -46,16 +46,22 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	########## SETTINGS  ########################
 
+	# BATCH_SIZE = 32
 	BATCH_SIZE = 32
-	LEARNING_RATE = 1e-5
-	WEIGHT_DECAY = 1e-3
+	# LEARNING_RATE = 1e-5
+	LEARNING_RATE = 1e-4
+	# WEIGHT_DECAY = 1e-3
+	WEIGHT_DECAY=1e-4
 	NUMB_CLASS = 5
 	NUB_EPOCH= 200
-	numfolds = 5
+	numfolds = 2
 	DATA_LOAD_BOOL = True
-	SAVING_BOOL = False
+	SAVING_BOOL = True
 	HOP = 0;
 	BAND = 0;
+
+	SLIDING_WINDOW_LENGTH= 500
+	SLIDING_WINDOW_STEP = 250
 	############################################
 
 
@@ -137,22 +143,19 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	X=X.permute(0,2,1)
 
-	# SLIDING_WINDOW_LENGTH=500
-	# SLIDING_WINDOW_STEP = 250
-	# NB_SENSOR_CHANNELS = 52
+	### SLIDING WINDOW
 
-	# # Sensor data is segmented using a sliding window mechanism
-	# X_train, y_train = opp_sliding_window(X,y, SLIDING_WINDOW_LENGTH, SLIDING_WINDOW_STEP)
-	# # X_test, y_test = opp_sliding_window(X_test, y_test, SLIDING_WINDOW_LENGTH, SLIDING_WINDOW_STEP)
-
-	# # Data is reshaped
-	# X_train = X_train.reshape((-1, SLIDING_WINDOW_LENGTH, NB_SENSOR_CHANNELS)) # for input to Conv1D
-	# # X_test = X_test.reshape((-1, SLIDING_WINDOW_LENGTH, NB_SENSOR_CHANNELS)) # for input to Conv1D
-
-	# print(" ..after sliding and reshaping, train data: inputs {0}, targets {1}".format(X_train.shape, y_train.shape))
-	# # print(" ..after sliding and reshaping, test data : inputs {0}, targets {1}".format(X_test.shape, y_test.shape))
+	X_train, y_train = opp_sliding_window(X, y, SLIDING_WINDOW_LENGTH, SLIDING_WINDOW_STEP)
+	# X_test, y_test = opp_sliding_window(X_test, y_test, SLIDING_WINDOW_LENGTH, SLIDING_WINDOW_STEP)
 
 
+
+
+
+
+
+
+	###
 
 	accuracies =[]
 
@@ -170,130 +173,6 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	tests=[]
 	preds=[]
-
-	# train_size = int(0.8 * len(BIO_train))+1
-	# test_size = int((len(BIO_train) - train_size)/2)
-	# # test_size = int((len(BIO_train)-train_size))
-	# train_dataset, test_dataset, val_dataset = torch.utils.data.random_split(BIO_train, [train_size, test_size, test_size])
-	# # train_dataset, test_dataset= torch.utils.data.random_split(BIO_train, [train_size, test_size])
-
-	# trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True,drop_last=True)
-	# testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE,drop_last=True)
-	# valloader = DataLoader(val_dataset, batch_size=BATCH_SIZE,drop_last=True)
-
-
-	# def train_LSTM(loader,valloader, num_epoch = 20,onehot=None): # Train the model\
-	# 	loss_history=[]
-	# 	val_history=[]
-	# 	print("Start training...")
-	# 	# model.train()
-
-	# 	pre_loss=10000
-	# 	for i in range(num_epoch):
-	# 		model.train()
-	# 		running_loss = []
-	# 		h = model.init_hidden(BATCH_SIZE)  
-	# 		for batch, label, types in tqdm(loader,disable=DATA_LOAD_BOOL):
-	# 			batch = batch.to(device)
-	# 			label = label.to(device)
-	# 			label = label -1 # indexing start from 1 (removing sitting conditon)
-	# 			h = tuple([e.data for e in h])
-	# 			# h = tuple([each.repeat(1, BATCH_SIZE, 1).data for each in h])
-	# 			optimizer.zero_grad()
-	# 			pred,h = model(batch,h,BATCH_SIZE)
-	# 			loss = criterion(pred, label.long())
-	# 			running_loss.append(loss.item())
-	# 			loss.backward()
-	# 			optimizer.step()
-	# 			loss_mean= np.mean(running_loss)
-	# 		loss_history.append(loss_mean)
-	# 		val_acc,_,_,_,_,_=evaluate_LSTM(model, valloader)
-	# 		if loss_mean< pre_loss:
-	# 			pre_loss = loss_mean
-	# 			torch.save(model.state_dict(), MODEL_NAME)
-	# 			print("*model saved*")
-	# 		print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss),val_acc))
-	# 		# print("Epoch {} loss:{} val_acc:{}".format(i+1,np.mean(running_loss)))
-	# 		print("Done!")
-	# 	return loss_history, val_history
-
-
-	# def evaluate_LSTM(model, loader):
-	#     model.eval()
-	#     correct = 0
-	#     steady_state_correct = 0
-	#     tot_steady_state = 0
-	#     transitional_correct = 0
-	#     tot_transitional = 0
-	#     preds=[]
-	#     tests=[]
-
-	#     class_correct = [0]*6
-	#     class_total = [0]*6
-	#     class_acc=[]
-
-	#     h = model.init_hidden(BATCH_SIZE) 
-
-	#     with torch.no_grad():
-	#         count = 0
-	#         totalloss = 0
-	#         for batch, label, types in tqdm(loader,disable=DATA_LOAD_BOOL):
-	#             batch = batch.to(device)
-	#             label = label-1 # indexing start from 1 (removing sitting conditon)
-	#             label = label.to(device)
-	#             h = tuple([each.data for each in h])
-
-	#             pred,h = model(batch,h,BATCH_SIZE)
-	#             totalloss += criterion(pred, label.long())
-	#             count +=1
-	#             preds.extend((torch.argmax(pred,dim=1)).tolist())
-	#             tests.extend(label.tolist())
-
-	#             correct += (torch.argmax(pred,dim=1)==label).sum().item()
-	#             steady_state_correct += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), types == 1)).sum().item()
-	#             tot_steady_state += (types == 1).sum().item()
-	#             transitional_correct += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), types == 0)).sum().item()
-	#             tot_transitional += (types == 0).sum().item()
-
-	#             for i in range(len(class_correct)):
-	#                 class_correct[i] += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), label.cpu() == i)).sum().item()
-	#                 class_total[i] += (label == i).sum().item()
-	#     acc = correct/len(loader.dataset)
-	#     for i in range(len(class_correct)):
-	#     	if class_total[i] == 0:
-	#     		print("Class {} has no samples".format(i))
-	#     	else:
-	#     		print("Class {} accuracy: {}".format(i, class_correct[i]/class_total[i]))
-	#     		class_acc.append(class_correct[i]/class_total[i])
-	#     ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
-	#     tr_acc = transitional_correct/tot_transitional if tot_transitional != 0 else "No transitional samples used"
-	#     print("Evaluation loss: {}".format(totalloss/count))
-	#     print("Evaluation accuracy: {}".format(acc))
-	#     print("Steady-state accuracy: {}".format(ss_acc))
-	#     print("Transistional accuracy: {}".format(tr_acc))
-	#     # accuracies.append(acc)
-	#     # ss_accuracies.append(ss_acc)
-	#     # tr_accuracies.append(tr_acc)
-	#     # class_acc_list.append(class_acc)
-
-	#     return acc, ss_acc, tr_acc, preds, tests, class_acc
-
-
-
-
-	# train_LSTM(trainloader,valloader,num_epoch)
-	# model.load_state_dict(torch.load(MODEL_NAME))
-	# evaluate_LSTM(model,testloader)
-	# accs,ss_accs,tr_accs,pred,test,class_acc=evaluate_LSTM(model,testloader)
-
-	# accuracies.append(accs)
-	# ss_accuracies.append(ss_accs)
-	# tr_accuracies.append(tr_accs)
-
-	# preds.extend(pred)
-	# tests.extend(test)
-
-	# class_acc_list.append(class_acc)
 
 
 
@@ -340,18 +219,15 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		train_dataset = TensorDataset( X_train, y_train, types_train)
 		test_dataset = TensorDataset( X_test, y_test, types_test)
 
-		trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-		testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
+		trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True,drop_last=True)
+		testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE,drop_last=True)
 
 		print("######################Fold:{}#####################".format(i+1))
 		train_class.train_LSTM(loader=trainloader,num_epoch=num_epoch)
 
 		model.load_state_dict(torch.load(MODEL_NAME))
 
-
-		# print("Evaluate on test set")
-
-		accs,ss_accs,tr_accs,pred,test,class_acc=train_class.evaluate(testloader)
+		accs,ss_accs,tr_accs,pred,test,class_acc=train_class.evaluate_LSTM(testloader)
 		accuracies.append(accs)
 		ss_accuracies.append(ss_accs)
 		tr_accuracies.append(tr_accs)
@@ -361,12 +237,13 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 		class_acc_list.append(class_acc)
 
+		del X_train, y_train, X_test, y_test, types_train, types_test, train_dataset, test_dataset , trainloader, testloader
+
+	
+
 		i +=1
 
 	print('saved on the results')
-
-
-	# model.load_state_dict(torch.load('./models/bestmodel_BATCH_SIZE32_LR1e-05_WD0.001_EPOCH200_BAND10_HOP10.pth', map_location='cpu'))
 
 
 	print('writing...')
@@ -401,8 +278,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 
 
-classifiers=['LSTM']
-# classifiers=['DeepConvLSTM']
+# classifiers=['LSTM']
+classifiers=['DeepConvLSTM']
 
 sensors=["imu","emg","goin"]
 sensor_str='_'.join(sensors)

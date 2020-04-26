@@ -30,7 +30,7 @@ class EnableDataset(Dataset):
     '''
     def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN",mode_specific=False, data_range=(1, 51), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0,time_series=False):
         self.model_type = model_type
-        if self.model_type == "CNN" or "LSTM": 
+        if self.model_type == "CNN" or "LSTM" or "DeepConvLSTM": 
             print("    range: [%d, %d)" % (data_range[0], data_range[1]))
             self.dataset = []
             self.prev_label = np.array([], dtype=np.int64)
@@ -83,7 +83,7 @@ class EnableDataset(Dataset):
                         continue
                     raw_data = pd.read_csv(filename)
                     # pdb.set_trace()
-                    segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
+                    # segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
                     labels = np.array([], dtype=np.int64)
                     timestep_type = []
                     timesteps = []
