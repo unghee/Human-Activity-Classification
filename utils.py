@@ -97,7 +97,6 @@ class trainclass():
 		loss_history=[]
 		val_history=[]
 		print("Start training...")
-		# model.train()
 
 		pre_loss=10000
 		for i in range(num_epoch):
@@ -260,7 +259,8 @@ class trainclass():
 	    acc = correct/len(loader.dataset)
 	    for i in range(len(class_correct)):
 	    	if class_total[i] == 0:
-	    		print("Class {} has no samples".format(i))
+	    		if printbool:
+	    			print("Class {} has no samples".format(i))
 	    	else:
 	    		if printbool:
 	    			print("Class {} accuracy: {}".format(i, class_correct[i]/class_total[i]))
