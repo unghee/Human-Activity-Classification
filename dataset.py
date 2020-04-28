@@ -30,7 +30,7 @@ class EnableDataset(Dataset):
     '''
     def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN",mode_specific=False, data_range=(1, 51), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0,time_series=False):
         self.model_type = model_type
-        if self.model_type == "CNN" or "LSTM" or "DeepConvLSTM": 
+        if self.model_type == "CNN" or "LSTM" or "DeepConvLSTM" or "LIRLSTM": 
             print("    range: [%d, %d)" % (data_range[0], data_range[1]))
             self.dataset = []
             self.prev_label = np.array([], dtype=np.int64)
@@ -250,7 +250,7 @@ class EnableDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, index):
-        if self.model_type == "CNN":
+        if self.model_type == "CNN" or "LIRLSTM":
             if self.mode_specific:
                 img, label, timestep_type, prev__label= self.dataset[index]
                 if self.transform:

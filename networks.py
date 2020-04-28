@@ -112,6 +112,59 @@ class MyResNet18(ResNet):
         return x1
 
 
+class LIRLSTM(nn.Module):
+    def __init__(self,INPUT_NUM,NUMB_CLASS, n_hidden=256, n_layers=2, n_classes=5, drop_prob=0.5,gpubool=False):
+        super().__init__()
+        self.sclayer1 = nn.Sequential(
+            nn.Conv2d(INPUT_NUM, 128, kernel_size=5, stride=1, padding=2),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2))
+        self.sclayer2 = nn.Sequential(
+            nn.Conv2d(128, 256, kernel_size=5, stride=1, padding=2),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            )
+        self.drop_out = nn.Dropout()
+        self.drop_prob = drop_prob
+        self.gpubool= gpubool
+        self.n_layers=n_layers
+        self.n_hidden= n_hidden
+
+        # self.fc1 = nn.Linear( 4096, 2000)
+        self.fc1 = nn.Linear( 6144, 2000)
+        self.lstm  = nn.LSTM(2000, self.n_hidden, self.n_layers, dropout=self.drop_prob,batch_first=True)
+        self.fc2 = nn.Linear(n_hidden, NUMB_CLASS)
+
+
+    def forward(self,x):
+        x = self.sclayer1(x)
+        x = self.sclayer2(x)
+        x = x.reshape(x.size(0), -1)
+        x = self.drop_out(x)
+        x = self.fc1(x)
+        x = self.lstm(x)
+        x = x.contiguous().view(-1, self.n_hidden)
+        x = self.fc2(x)
+
+        return x
+
+    def init_hidden(self, batch_size):
+        ''' Initializes hidden state '''
+        # Create two new tensors with sizes n_layers x batch_size x n_hidden,
+        # initialized to zero, for hidden state and cell state of LSTM
+        weight = next(self.parameters()).data
+        
+        if (self.gpubool):
+            hidden = (weight.new(self.n_layers, batch_size, self.n_hidden).zero_().cuda().float(),
+                  weight.new(self.n_layers, batch_size, self.n_hidden).zero_().cuda().float())
+        else:
+            hidden = (weight.new(self.n_layers, batch_size, self.n_hidden).zero_().float(),
+                      weight.new(self.n_layers, batch_size, self.n_hidden).zero_().float())
+
+        return hidden    
+
+
+
 class LSTM(nn.Module):
     def __init__(self, n_channels, n_hidden=256, n_layers=2, n_classes=5, drop_prob=0.5,gpubool=False):
         #https://github.com/dspanah/Sensor-Based-Human-Activity-Recognition-LSTMsEnsemble-Pytorch/blob/master/notebooks/1.0-dsp-LSTMsEnsemle.ipynb
