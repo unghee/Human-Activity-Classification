@@ -39,6 +39,8 @@ from skorch import NeuralNetClassifier
 from sklearn.model_selection import GridSearchCV
 
 
+# torch.manual_seed(0)
+
 def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"],NN_model=None, LEARNING_RATE=1e-4,WEIGHT_DECAY =1e-3):
 
 	########## SETTINGS  ########################
@@ -47,7 +49,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# LEARNING_RATE = 1e-5
 	# WEIGHT_DECAY = 1e-3
 	NUMB_CLASS = 5
-	NUB_EPOCH= 1
+	NUB_EPOCH= 100
 	numfolds = 1
 	DATA_LOAD_BOOL = True
 	SAVING_BOOL = False
@@ -151,55 +153,58 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
    ### splitting
 
 
-	# train_size = int(0.9 * len(BIO_train))+1
-	# # test_size = int((len(BIO_train) - train_size)/2)
+	torch.manual_seed(0)
+
+	train_size = int(0.8 * len(BIO_train))+1
+	test_size = int((len(BIO_train) - train_size)/2)
 	# test_size = int((len(BIO_train)-train_size))
-	# # train_dataset, test_dataset, val_dataset = torch.utils.data.random_split(BIO_train, [train_size, test_size, test_size])
+	train_dataset, test_dataset, val_dataset = torch.utils.data.random_split(BIO_train, [train_size, test_size, test_size])
 	# train_dataset, test_dataset= torch.utils.data.random_split(BIO_train, [train_size, test_size])
 
-	# trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True,drop_last=True)
-	# testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE,drop_last=True)
-	# # valloader = DataLoader(val_dataset, batch_size=BATCH_SIZE,drop_last=True)
+	# print(test_dataset[11][0])
+	trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True,drop_last=True)
+	testloader = DataLoader(test_dataset, batch_size=BATCH_SIZE,drop_last=True)
+	valloader = DataLoader(val_dataset, batch_size=BATCH_SIZE,drop_last=True)
 
 
 
-	validation_split = .2
-	shuffle_dataset = True
-	random_seed= 42
+	# validation_split = .2
+	# shuffle_dataset = True
+	# random_seed= 42
 
-	# Creating data indices for training and validation splits:
-	dataset_size = len(BIO_train)
-	indices = list(range(dataset_size))
-	split = int(np.floor(validation_split * dataset_size))
-	if shuffle_dataset :
-	    np.random.seed(random_seed)
-	    np.random.shuffle(indices)
-	train_indices, val_indices = indices[split:], indices[:split]
+	# # Creating data indices for training and validation splits:
+	# dataset_size = len(BIO_train)
+	# indices = list(range(dataset_size))
+	# split = int(np.floor(validation_split * dataset_size))
+	# if shuffle_dataset :
+	#     np.random.seed(random_seed)
+	#     np.random.shuffle(indices)
+	# train_indices, val_indices = indices[split:], indices[:split]
 
-	valset_size = len(val_indices)
-	val_indices = list(range(valset_size))
-	val_split = int(np.floor(0.5 * valset_size))
+	# valset_size = len(val_indices)
+	# val_indices = list(range(valset_size))
+	# val_split = int(np.floor(0.5 * valset_size))
 
-	np.random.seed(random_seed)
-	np.random.shuffle(val_indices)
+	# np.random.seed(random_seed)
+	# np.random.shuffle(val_indices)
 
-	test_indices, val_indices = val_indices[val_split:], val_indices[:val_split]
-	# for test in test_indices:
-	# 	for val in valtrue_indices:
-	# 		if val == test:
-	# 			print ("error")
+	# test_indices, val_indices = val_indices[val_split:], val_indices[:val_split]
+	# # for test in test_indices:
+	# # 	for val in valtrue_indices:
+	# # 		if val == test:
+	# # 			print ("error")
 
-	# Creating PT data samplers and loaders:
-	train_sampler = SubsetRandomSampler(train_indices)
-	valid_sampler = SubsetRandomSampler(val_indices)
-	test_sampler = SubsetRandomSampler(test_indices)
+	# # Creating PT data samplers and loaders:
+	# train_sampler = SubsetRandomSampler(train_indices)
+	# valid_sampler = SubsetRandomSampler(val_indices)
+	# test_sampler = SubsetRandomSampler(test_indices)
 
-	trainloader = torch.utils.data.DataLoader(BIO_train, batch_size=BATCH_SIZE, 
-	                                           sampler=train_sampler,drop_last=True)
-	valloader = torch.utils.data.DataLoader(BIO_train, batch_size=BATCH_SIZE,
-	                                                sampler=valid_sampler,drop_last=True)
-	testloader = torch.utils.data.DataLoader(BIO_train, batch_size=BATCH_SIZE,
-	                                                sampler=test_sampler,drop_last=True)
+	# trainloader = torch.utils.data.DataLoader(BIO_train, batch_size=BATCH_SIZE, 
+	#                                            sampler=train_sampler,drop_last=True)
+	# valloader = torch.utils.data.DataLoader(BIO_train, batch_size=BATCH_SIZE,
+	#                                                 sampler=valid_sampler,drop_last=True)
+	# testloader = torch.utils.data.DataLoader(BIO_train, batch_size=BATCH_SIZE,
+	#                                                 sampler=test_sampler,drop_last=True)
 
 
 
@@ -433,7 +438,6 @@ sensor_str='_'.join(sensors)
 # modes = ['bilateral','ipsilateral','contralateral']
 modes = ['bilateral']
 
-val_accs = []
 
 
 				# confusion=run_classifier(mode=mode,classifier=classifier,sensor=sensor,NN_model=None)
@@ -444,19 +448,22 @@ for combo in combinations(sensors,i):
 
 print(classifiers, sensor, modes)
 
-lrs = [1e-3,1e-4,1e-5]
-wds = [1e-2,1e-3,1e-4]
+# lrs = [1e-3,1e-4,1e-5]
+# wds = [1e-2,1e-3,1e-4]
 # lrs = [1e-2]
 # wds = [1e-2]
+lrs = [1e-5]
+# wds = [1e-2,1e-3,1e-4]
+wds = [1e-4,1e-5,1e-6]
+val_accs = [[None]*len(lrs) for _ in range(len(wds))] 
 
-
-
-for lr in lrs:
-	for wd in wds:
+for ind_lr,lr in enumerate(lrs):
+	for ind_wd, wd in enumerate(wds):
 		print("lr", lr)
 		print("wd" ,wd)
 		val_acc=run_classifier(mode=modes[0],classifier=classifiers[0],sensor=sensor,NN_model=None,LEARNING_RATE=lr,WEIGHT_DECAY=wd)
-		val_accs.append(val_acc)
+		# val_accs.append(val_acc)
+		val_accs[ind_lr][ind_wd] = val_acc 
 
 
 # print('writing...')
@@ -464,7 +471,7 @@ for lr in lrs:
 # 	os.makedirs('gridsearch.txt')
 
 
-with open('./results/'+classifiers[0]+'/gridsearch.txt', 'w') as f:
+with open('./results/'+classifiers[0]+'/gridsearch3.txt', 'w') as f:
 	f.write('lr  ')
 	f.write('wd  ')
 	f.write('val_acc  ')
@@ -472,12 +479,12 @@ with open('./results/'+classifiers[0]+'/gridsearch.txt', 'w') as f:
 	for i in range(len(lrs)):
 		for j in range(len(wds)):
 			f.write("%s " %lrs[i])
-			f.write("%s " %wds[i])
-			f.write("%s " %val_accs[i])
+			f.write("%s " %wds[j])
+			f.write("%s " %val_accs[i][j])
 			f.write("\n")
 			print(lrs[i])
-			print(wds[i])
-			print(val_accs[i])
+			print(wds[j])
+			print(val_accs[i][j])
 			print("\n")
 
 # with open('./results/'+classifiers[0]+'_'+sensor_str+'_'+modes[0]+'_'+'confusion.txt', 'w') as f:
