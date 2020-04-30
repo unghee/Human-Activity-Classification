@@ -131,22 +131,26 @@ class LIRLSTM(nn.Module):
         self.n_hidden= n_hidden
 
         # self.fc1 = nn.Linear( 4096, 2000)
-        self.fc1 = nn.Linear( 6144, 2000)
-        self.lstm  = nn.LSTM(2000, self.n_hidden, self.n_layers, dropout=self.drop_prob,batch_first=True)
+        # self.fc1 = nn.Linear( 6144, 2000)
+        self.lstm  = nn.LSTM(256, self.n_hidden, self.n_layers, dropout=self.drop_prob,batch_first=True)
         self.fc2 = nn.Linear(n_hidden, NUMB_CLASS)
 
 
-    def forward(self,x):
+    def forward(self,x, hidden,batch_size):
         x = self.sclayer1(x)
         x = self.sclayer2(x)
-        x = x.reshape(x.size(0), -1)
+        # x = x.reshape(x.size(0), -1)
         x = self.drop_out(x)
-        x = self.fc1(x)
-        x = self.lstm(x)
+        # x = self.fc1(x)
+        x = x.view(batch_size,x.size(1),-1)
+        x = x.permute(0,2,1)
+        x, hidden = self.lstm(x)
         x = x.contiguous().view(-1, self.n_hidden)
         x = self.fc2(x)
+        x = x.view(batch_size,x.size(1), -1)
+        x = x[:,-1,:]
 
-        return x
+        return x, hidden
 
     def init_hidden(self, batch_size):
         ''' Initializes hidden state '''
@@ -246,6 +250,7 @@ class DeepConvLSTM(nn.Module):
     def forward(self, x, hidden, batch_size):
         
         x = x.view(-1, self.n_channels, self.sliding_window_length)
+        x = x.float()
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))

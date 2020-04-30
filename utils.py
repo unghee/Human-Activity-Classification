@@ -104,6 +104,7 @@ class trainclass():
 			running_loss = []
 			h = self.model.init_hidden(self.batch_size)  
 			for batch, label, types in tqdm(loader,disable=self.data_bool):
+	
 				batch = batch.to(self.device)
 				label = label.to(self.device)
 				label = label -1 # indexing start from 1 (removing sitting conditon)

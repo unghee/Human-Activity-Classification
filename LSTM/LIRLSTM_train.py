@@ -49,7 +49,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# LEARNING_RATE = 1e-5
 	# WEIGHT_DECAY = 1e-3
 	NUMB_CLASS = 5
-	NUB_EPOCH= 1
+	NUB_EPOCH= 200
 	numfolds = 1
 	DATA_LOAD_BOOL = True
 	SAVING_BOOL = False
@@ -237,7 +237,7 @@ for ind_lr,lr in enumerate(lrs):
 
 
 
-with open('./results/'+classifiers[0]+'/gridsearch3.txt', 'w') as f:
+with open('./results/'+classifiers[0]+'/LIRLSTM.txt', 'w') as f:
 	f.write('lr  ')
 	f.write('wd  ')
 	f.write('val_acc  ')

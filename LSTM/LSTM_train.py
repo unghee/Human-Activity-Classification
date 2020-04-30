@@ -74,7 +74,8 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER +'_'+MODE+'_'+sensor_str+'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_accuracy.txt'
 
-	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER +'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pkl'
+	# SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER +'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pkl'
+	SAVE_NAME= './checkpoints/'+'LSTM'+ '/'+'LSTM'+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pkl'
 
 	if not os.path.exists('./models/'+CLASSIFIER):
 		os.makedirs('./models/'+CLASSIFIER)
@@ -111,7 +112,9 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# GPU_BOOL =False
 
 
-	model = LSTM(n_channels=INPUT_NUM,n_classes=NUMB_CLASS,gpubool=GPU_BOOL)
+	# model = LSTM(n_channels=INPUT_NUM,n_classes=NUMB_CLASS,gpubool=GPU_BOOL)
+	model = DeepConvLSTM(n_channels=INPUT_NUM,n_classes=NUMB_CLASS,gpubool=GPU_BOOL)
+
 	model.apply(init_weights)
 
 
@@ -196,7 +199,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 
 
-classifiers=['LSTM']
+classifiers=['DeepConvLSTM']
 sensors=["imu","emg","goin"]
 sensor_str='_'.join(sensors)
 # modes = ['bilateral','ipsilateral','contralateral']
@@ -210,11 +213,11 @@ for combo in combinations(sensors,i):
 
 print(classifiers, sensor, modes)
 
-# lrs = [1e-3,1e-4,1e-5]
-lrs = [1e-5]
+lrs = [1e-4,1e-5,1e-6]
+# lrs = [1e-5]
 # wds = [1e-2,1e-3,1e-4]
 wds = [1e-4,1e-5,1e-6]
-val_accs = [[None]*len(lrs) for _ in range(len(wds))] 
+val_accs = [[None]*len(wds) for _ in range(len(lrs))] 
 
 for ind_lr,lr in enumerate(lrs):
 	for ind_wd, wd in enumerate(wds):
@@ -227,7 +230,7 @@ for ind_lr,lr in enumerate(lrs):
 
 
 
-with open('./results/'+classifiers[0]+'/gridsearch3.txt', 'w') as f:
+with open('./results/'+classifiers[0]+'/gridsearch1.txt', 'w') as f:
 	f.write('lr  ')
 	f.write('wd  ')
 	f.write('val_acc  ')
