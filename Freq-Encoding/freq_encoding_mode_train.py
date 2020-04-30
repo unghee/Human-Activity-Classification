@@ -88,9 +88,16 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# Load the dataset and train, val, test splits
 	print("Loading datasets...")
 
-
+	spectrogramTime = 0.0
 	if SAVING_BOOL:
+		if torch.cuda.is_available():
+			torch.cuda.synchronize()
+		beg = int(round(time.time()*1000))
 		BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
+		if torch.cuda.is_available():
+			torch.cuda.synchronize()
+		end = int(round(time.time()*1000))
+		spectrogramTime += (end - beg)/len(BIO_train)
 		save_object(BIO_train,SAVE_NAME)
 	else:
 		with open(SAVE_NAME, 'rb') as input:
@@ -98,7 +105,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 8),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 
 
-		
+
 
 
 	INPUT_NUM=BIO_train.input_numb
@@ -135,6 +142,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	accuracies =[]
 	ss_accuracies=[]
 	tr_accuracies=[]
+	inferenceTime = 0.0
 
 
 	skf = KFold(n_splits = numfolds, shuffle = True)
@@ -166,10 +174,12 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		model.load_state_dict(torch.load(MODEL_NAME))
 
 		# print("Evaluate on test set")
-		accs,ss_accs,tr_accs=train_class.evaluate_modesp(testloader)
+		accs,ss_accs,tr_accs,inf_time=train_class.evaluate_modesp(testloader)
 		accuracies.append(accs)
 		ss_accuracies.append(ss_accs)
 		tr_accuracies.append(tr_accs)
+
+		inferenceTime += inf_time
 
 		i +=1
 
@@ -181,6 +191,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# 		f.write("%s\n" % item)
 	# f.close()
 
+	inferenceTime = inferenceTime/i
 
 	print('writing...')
 	with open(RESULT_NAME, 'w') as f:
@@ -195,6 +206,11 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		f.write('transitional ')
 		for item in tr_accuracies:
 			f.write("%s " % item)
+		f.write('\n')
+
+		f.write('spectrogram time %s' % spectrogramTime)
+		f.write('\n')
+		f.write('inference time %s' % inferenceTime)
 	f.close()
 
 

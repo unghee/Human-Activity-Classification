@@ -82,16 +82,20 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	if not os.path.exists('./checkpoints/'+CLASSIFIER):
 		os.makedirs('./checkpoints/'+CLASSIFIER)
 
-
+	spectrogramTime = 0.0
 	if SAVING_BOOL:
 
 		# Load the dataset and train, val, test splits
 		print("Loading datasets...")
-
-		BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
-
+		if torch.cuda.is_available():
+			torch.cuda.synchronize()
+		beg = int(round(time.time()*1000))
+		BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+		if torch.cuda.is_available():
+			torch.cuda.synchronize()
+		end = int(round(time.time()*1000))
+		spectrogramTime += (end - beg)/len(BIO_train)
 		save_object(BIO_train,SAVE_NAME)
-
 	with open(SAVE_NAME, 'rb') as input:
 	    BIO_train = pickle.load(input)
 
@@ -146,6 +150,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	tests=[]
 	preds=[]
+	inferenceTime = 0.0
 	for train_index, test_index in skf.split(X, y, types):
 
 		model.load_state_dict(init_state)
@@ -169,7 +174,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 		# print("Evaluate on test set")
 
-		accs,ss_accs,tr_accs,pred,test,class_acc=train_class.evaluate(testloader)
+		accs,ss_accs,tr_accs,pred,test,class_acc,inf_time=train_class.evaluate(testloader)
 		accuracies.append(accs)
 		ss_accuracies.append(ss_accs)
 		tr_accuracies.append(tr_accs)
@@ -179,13 +184,15 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 		class_acc_list.append(class_acc)
 
+		inferenceTime += inf_time
+
 		i +=1
 
 	print('saved on the results')
 
 
 	# model.load_state_dict(torch.load('./models/bestmodel_BATCH_SIZE32_LR1e-05_WD0.001_EPOCH200_BAND10_HOP10.pth', map_location='cpu'))
-
+	inferenceTime = inferenceTime/i
 
 	print('writing...')
 	with open(RESULT_NAME, 'w') as f:
@@ -206,6 +213,11 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 			f.write('class {} '.format(j))
 			for m in range(0,numfolds):
 				f.write("%s " % class_acc_list[m][j])
+		f.write('\n')
+
+		f.write('spectrogram time %s' % spectrogramTime)
+		f.write('\n')
+		f.write('inference time %s' % inferenceTime)
 
 
 

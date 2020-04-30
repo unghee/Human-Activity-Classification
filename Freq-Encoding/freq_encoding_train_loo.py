@@ -68,17 +68,25 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
 
-
+	spectrogramTime = 0.0
 	if SAVING_BOOL:
 		subject_data = []
+		tot = 0
 		for subject in subjects:
+			if torch.cuda.is_available():
+				torch.cuda.synchronize()
+			beg = int(round(time.time()*1000))
 			subject_data.append(EnableDataset(subject_list= [subject],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE))
-
+			if torch.cuda.is_available():
+				torch.cuda.synchronize()
+			end = int(round(time.time()*1000))
+			tot += len(subject_data[-1])
+			spectrogramTime += end - beg
 		save_object(subject_data,SAVE_NAME)
 	else:
 		with open(SAVE_NAME, 'rb') as input:
 		    subject_data = pickle.load(input)
-
+	spectrogramTime = spectrogramTime / tot
 
 	INPUT_NUM=subject_data[0].input_numb
 
@@ -121,6 +129,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	tests=[]
 	preds=[]
+	inferenceTime = 0.0
 	# for train_index, test_index in skf.split(X, y, types):
 	for train_index, test_index in skf.split(subject_data):
 		print(train_index,test_index)
@@ -164,7 +173,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 		model.load_state_dict(torch.load(MODEL_NAME))
 
-		accs,ss_accs,tr_accs,pred,test,class_acc=train_class.evaluate(testloader)
+		accs,ss_accs,tr_accs,pred,test,class_acc,inf_time=train_class.evaluate(testloader)
 		accuracies.append(accs)
 		ss_accuracies.append(ss_accs)
 		tr_accuracies.append(tr_accs)
@@ -177,6 +186,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 		for j in range(len(class_accs)):
 			class_accs[j] += class_acc[j]
+		inferenceTime += inf_time
 
 		del  test_dataset, train_dataset, trainloader, testloader
 
@@ -202,6 +212,10 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	for item in tr_accuracies:
 		print(item)
 
+	inferenceTime = inferenceTime / i
+	print("Inference Time")
+	print(inferenceTime)
+
 
 	print('writing...')
 	with open(RESULT_NAME, 'w') as f:
@@ -220,6 +234,11 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		f.write('subject_numb ')
 		for item in subject_numb:
 			f.write("%s " % item)
+		f.write('\n')
+
+		f.write('spectrogram time %s' % spectrogramTime)
+		f.write('\n')
+		f.write('inference time %s' % inferenceTime)
 
 	f.close()
 

@@ -19,6 +19,7 @@ import copy
 import os
 import random
 import pdb
+import time
 
 class trainclass():
 	def __init__(self,model,optimizer,databool,device,criterion,model_name):
@@ -106,6 +107,7 @@ class trainclass():
 	    class_total = [0]*6
 	    class_acc=[]
 
+	    inferenceTime = 0.0
 	    with torch.no_grad():
 	        count = 0
 	        totalloss = 0
@@ -113,7 +115,16 @@ class trainclass():
 	            batch = batch.to(self.device)
 	            label = label-1 # indexing start from 1 (removing sitting conditon)
 	            label = label.to(self.device)
+
+	            if torch.cuda.is_available():
+	                torch.cuda.synchronize()
+	            beg = int(round(time.time()*1000))
 	            pred = self.model(batch)
+	            if torch.cuda.is_available():
+	                torch.cuda.synchronize()
+	            end = int(round(time.time()*1000))
+	            inferenceTime += end - beg
+
 	            totalloss += self.criterion(pred, label)
 	            count +=1
 	            preds.extend((torch.argmax(pred,dim=1)).tolist())
@@ -137,12 +148,14 @@ class trainclass():
 	    		class_acc.append(class_correct[i]/class_total[i])
 	    ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
 	    tr_acc = transitional_correct/tot_transitional if tot_transitional != 0 else "No transitional samples used"
+	    inferenceTime = inferenceTime/len(class_correct)
 	    print("Evaluation loss: {}".format(totalloss/count))
 	    print("Evaluation accuracy: {}".format(acc))
 	    print("Steady-state accuracy: {}".format(ss_acc))
 	    print("Transistional accuracy: {}".format(tr_acc))
+	    print("Inference Time: {} ms".format(inferenceTime))
 
-	    return acc, ss_acc, tr_acc, preds, tests, class_acc
+	    return acc, ss_acc, tr_acc, preds, tests, class_acc, inferenceTime
 
 
 	def evaluate_modesp(self,loader):
@@ -152,6 +165,7 @@ class trainclass():
 	    tot_steady_state = 0
 	    transitional_correct = 0
 	    tot_transitional = 0
+	    inferenceTime = 0.0
 	    with torch.no_grad():
 	        count = 0
 	        totalloss = 0
@@ -160,7 +174,14 @@ class trainclass():
 	            label = label-1 # indexing start from 1 (removing sitting conditon)
 	            label = label.to(self.device)
 	            onehot = onehot.to(self.device)
+	            if torch.cuda.is_available():
+	                torch.cuda.synchronize()
+	            beg = int(round(time.time()*1000))
 	            pred = self.model(batch,onehot)
+	            if torch.cuda.is_available():
+	                torch.cuda.synchronize()
+	            end = int(round(time.time()*1000))
+	            inferenceTime += end - beg
 	            totalloss += self.criterion(pred, label)
 	            count +=1
 	            correct += (torch.argmax(pred,dim=1)==label).sum().item()
@@ -172,11 +193,13 @@ class trainclass():
 
 	    ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
 	    tr_acc = transitional_correct/tot_transitional if tot_transitional != 0 else "No transitional samples used"
+	    inferenceTime = inferenceTime/len(class_correct)
 	    print("Evaluation loss: {}".format(totalloss/count))
 	    print("Evaluation accuracy: {}".format(acc))
 	    print("Steady-state accuracy: {}".format(ss_acc))
 	    print("Transistional accuracy: {}".format(tr_acc))
-	    return acc, ss_acc, tr_acc
+	    print("Inference Time: {} ms".format(inferenceTime))
+	    return acc, ss_acc, tr_acc, inferenceTime
 
 def save_object(obj, filename):
     with open(filename, 'wb') as output:  # Overwrites any existing file.

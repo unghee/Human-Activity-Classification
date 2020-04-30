@@ -92,16 +92,26 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
 
+	spectrogramTime = 0.0
 	if SAVING_BOOL:
 		subject_data = []
 		for subject in subjects:
+			if torch.cuda.is_available():
+				torch.cuda.synchronize()
+			beg = int(round(time.time()*1000))
 			subject_data.append(EnableDataset(subject_list= [subject],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL))
+			if torch.cuda.is_available():
+				torch.cuda.synchronize()
+			end = int(round(time.time()*1000))
+			tot += len(subject_data[-1])
+			spectrogramTime += end - beg
 
 		save_object(subject_data,SAVE_NAME)
 
 	else:
 		with open(SAVE_NAME, 'rb') as input:
 			subject_data = pickle.load(input)
+	spectrogramTime = spectrogramTime / tot
 
 	INPUT_NUM=subject_data[0].input_numb
 
@@ -136,6 +146,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 
 	train_class=trainclass(model,optimizer,DATA_LOAD_BOOL,device,criterion,MODEL_NAME)
+	inferenceTime = 0.0
 
 	for train_index, test_index in skf.split(subject_data):
 		print(train_index,test_index)
@@ -189,17 +200,19 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		model.load_state_dict(torch.load(MODEL_NAME))
 
 		# print("Evaluate on test set")
-		accs,ss_accs,tr_accs=train_class.evaluate_modesp(testloader)
+		accs,ss_accs,tr_accs,inf_time=train_class.evaluate_modesp(testloader)
 		accuracies.append(accs)
 		ss_accuracies.append(ss_accs)
 		tr_accuracies.append(tr_accs)
 
 		subject_numb.append(test_index[0])
+		inferenceTime += inf_time
 
 		i +=1
 
 	print('saved on the results')
 
+	inferenceTime = inferenceTime / i
 
 	# with open(RESULT_NAME, 'w') as f:
 	# 	for item in accuracies:
@@ -224,6 +237,11 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		f.write('subject_numb ')
 		for item in subject_numb:
 			f.write("%s " % item)
+		f.write('\n')
+
+		f.write('spectrogram time %s' % spectrogramTime)
+		f.write('\n')
+		f.write('inference time %s' % inferenceTime)
 	f.close()
 
 
