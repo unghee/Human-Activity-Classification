@@ -204,7 +204,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	for item in tr_accuracies:
 		print(item)
 
-	inferenceTime = inferenceTime / i
+	inferenceTime = inferenceTime / len(preds)
 	print("Inference Time")
 	print(inferenceTime)
 

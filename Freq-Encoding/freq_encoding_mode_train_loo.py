@@ -138,7 +138,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	train_class=trainclass(model,optimizer,DATA_LOAD_BOOL,device,criterion,MODEL_NAME)
 	inferenceTime = 0.0
-
+	tot_predictions = 0
 	for train_index, test_index in skf.split(subject_data):
 		print(train_index,test_index)
 
@@ -191,10 +191,11 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		model.load_state_dict(torch.load(MODEL_NAME))
 
 		# print("Evaluate on test set")
-		accs,ss_accs,tr_accs,inf_time=train_class.evaluate_modesp(testloader)
+		accs,ss_accs,tr_accs,inf_time,num_preds=train_class.evaluate_modesp(testloader)
 		accuracies.append(accs)
 		ss_accuracies.append(ss_accs)
 		tr_accuracies.append(tr_accs)
+		tot_predictions += num_preds
 
 		subject_numb.append(test_index[0])
 		inferenceTime += inf_time
@@ -203,7 +204,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	print('saved on the results')
 
-	inferenceTime = inferenceTime / i
+	inferenceTime = inferenceTime/tot_predictions
 
 	# with open(RESULT_NAME, 'w') as f:
 	# 	for item in accuracies:

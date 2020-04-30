@@ -185,8 +185,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 
 	# model.load_state_dict(torch.load('./models/bestmodel_BATCH_SIZE32_LR1e-05_WD0.001_EPOCH200_BAND10_HOP10.pth', map_location='cpu'))
-	inferenceTime = inferenceTime/i
-
+	inferenceTime = inferenceTime/len(preds)
 	print('writing...')
 	with open(RESULT_NAME, 'w') as f:
 		f.write('total ')
