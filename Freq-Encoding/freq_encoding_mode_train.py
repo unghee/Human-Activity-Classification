@@ -138,6 +138,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	ss_accuracies=[]
 	tr_accuracies=[]
 	inferenceTime = 0.0
+	total_predictions = 0
 
 
 	skf = KFold(n_splits = numfolds, shuffle = True)
@@ -169,12 +170,13 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 		model.load_state_dict(torch.load(MODEL_NAME))
 
 		# print("Evaluate on test set")
-		accs,ss_accs,tr_accs,inf_time=train_class.evaluate_modesp(testloader)
+		accs,ss_accs,tr_accs,inf_time,num_preds=train_class.evaluate_modesp(testloader)
 		accuracies.append(accs)
 		ss_accuracies.append(ss_accs)
 		tr_accuracies.append(tr_accs)
 
 		inferenceTime += inf_time
+		total_predictions += num_preds
 
 		i +=1
 
@@ -186,7 +188,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# 		f.write("%s\n" % item)
 	# f.close()
 
-	inferenceTime = inferenceTime/i
+	inferenceTime = inferenceTime/total_predictions
 
 	print('writing...')
 	with open(RESULT_NAME, 'w') as f:

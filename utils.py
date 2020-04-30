@@ -148,12 +148,11 @@ class trainclass():
 	    		class_acc.append(class_correct[i]/class_total[i])
 	    ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
 	    tr_acc = transitional_correct/tot_transitional if tot_transitional != 0 else "No transitional samples used"
-	    inferenceTime = inferenceTime/len(class_correct)
 	    print("Evaluation loss: {}".format(totalloss/count))
 	    print("Evaluation accuracy: {}".format(acc))
 	    print("Steady-state accuracy: {}".format(ss_acc))
 	    print("Transistional accuracy: {}".format(tr_acc))
-	    print("Inference Time: {} ms".format(inferenceTime))
+	    print("Inference Time: {} ms".format(inferenceTime / len(preds)))
 
 	    return acc, ss_acc, tr_acc, preds, tests, class_acc, inferenceTime
 
@@ -166,6 +165,7 @@ class trainclass():
 	    transitional_correct = 0
 	    tot_transitional = 0
 	    inferenceTime = 0.0
+		num_predicted = 0
 	    with torch.no_grad():
 	        count = 0
 	        totalloss = 0
@@ -184,6 +184,7 @@ class trainclass():
 	            inferenceTime += end - beg
 	            totalloss += self.criterion(pred, label)
 	            count +=1
+	            num_predicted += len(preds)
 	            correct += (torch.argmax(pred,dim=1)==label).sum().item()
 	            steady_state_correct += (np.logical_and((torch.argmax(pred,dim=1) == label ).cpu(), types == 1)).sum().item()
 	            tot_steady_state += (types == 1).sum().item()
@@ -193,13 +194,12 @@ class trainclass():
 
 	    ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
 	    tr_acc = transitional_correct/tot_transitional if tot_transitional != 0 else "No transitional samples used"
-	    inferenceTime = inferenceTime/len(class_correct)
 	    print("Evaluation loss: {}".format(totalloss/count))
 	    print("Evaluation accuracy: {}".format(acc))
 	    print("Steady-state accuracy: {}".format(ss_acc))
 	    print("Transistional accuracy: {}".format(tr_acc))
-	    print("Inference Time: {} ms".format(inferenceTime))
-	    return acc, ss_acc, tr_acc, inferenceTime
+	    print("Inference Time: {} ms".format(inferenceTime / num_predicted))
+	    return acc, ss_acc, tr_acc, inferenceTime, num_predicted
 
 def save_object(obj, filename):
     with open(filename, 'wb') as output:  # Overwrites any existing file.
