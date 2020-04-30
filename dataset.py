@@ -16,6 +16,7 @@ import torchvision.transforms.functional as F
 
 
 import librosa
+import time
 
 import librosa.display
 import pdb
@@ -38,6 +39,7 @@ class EnableDataset(Dataset):
             self.transform = transform
             self.input_numb = 0
             self.mode_specific=mode_specific
+            self.spectrogramTime = 0.0
 
             exclude_list = [
                 # # 'AB194_Circuit_009',
@@ -74,7 +76,7 @@ class EnableDataset(Dataset):
                 # "AB156_Circuit_005",
                 # "AB156_Circuit_050"
             ]
-
+            num = 0
             for subjects in subject_list:
                 for i in range(data_range[0], data_range[1]):
                     filename = dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i
@@ -142,7 +144,15 @@ class EnableDataset(Dataset):
 
                             data = np.array(data)
                             self.input_numb=np.shape(data)[1]
+                            if torch.cuda.is_available():
+                                torch.cuda.synchronize()
+                            beg = int(round(time.time()*1000))
                             img= self.melspectrogram(data,bands=bands ,hop_length=hop_length)
+                            if torch.cuda.is_available():
+                                torch.cuda.synchronize()
+                            end = int(round(time.time()*1000))
+                            self.spectrogramTime += (end - beg) / len(img)
+                            num += 1
                             if self.mode_specific:
                                 self.dataset.append((img,labels[idx],timestep_type[idx],int(self.prev_label[idx])))
                             else:
@@ -234,6 +244,7 @@ class EnableDataset(Dataset):
                                 self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
+        self.spectrogramTime = self.spectrogramTime / num
 
 
 
@@ -295,7 +306,7 @@ class EnableDataset(Dataset):
                 ## plotting spectro and melspectro
 #                 if x == 30:
 #                     plt.figure(figsize=(10,8))
-#                     plt.rcParams['font.family'] = 'Times New Roman'  
+#                     plt.rcParams['font.family'] = 'Times New Roman'
 #                     plt.rcParams.update({'font.size': 31})
 #                     # D = librosa.amplitude_to_db(np.abs(librosa.stft(row)), ref=np.max)
 #                     # librosa.display.specshow(D, x_axis='s',y_axis='mel',sr=fs,fmax=fs/2,cmap='viridis')
@@ -316,7 +327,7 @@ class EnableDataset(Dataset):
 #                     librosa.display.specshow(S_dB,x_axis='s',hop_length=10,y_axis='linear',sr=fs,fmax=fs/2,cmap='viridis')
 #                     plt.colorbar(format='%+2.0f dB')
 
-#                     locs, labels = plt.xticks()  
+#                     locs, labels = plt.xticks()
 #                     plt.yticks(np.array([0,50,100,150,200]), ['0','50','100','150','200'])
 #                     plt.xticks(np.array([0.25,0.5,0.75]), ['0.25','0.50','0.75'])
 #                     plt.show()

@@ -90,14 +90,9 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 	spectrogramTime = 0.0
 	if SAVING_BOOL:
-		if torch.cuda.is_available():
-			torch.cuda.synchronize()
-		beg = int(round(time.time()*1000))
+
 		BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
-		if torch.cuda.is_available():
-			torch.cuda.synchronize()
-		end = int(round(time.time()*1000))
-		spectrogramTime += (end - beg)/len(BIO_train)
+		spectrogramTime += BIO_train.spectrogramTime
 		save_object(BIO_train,SAVE_NAME)
 	else:
 		with open(SAVE_NAME, 'rb') as input:

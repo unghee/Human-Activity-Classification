@@ -96,22 +96,13 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	if SAVING_BOOL:
 		subject_data = []
 		for subject in subjects:
-			if torch.cuda.is_available():
-				torch.cuda.synchronize()
-			beg = int(round(time.time()*1000))
 			subject_data.append(EnableDataset(subject_list= [subject],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL))
-			if torch.cuda.is_available():
-				torch.cuda.synchronize()
-			end = int(round(time.time()*1000))
-			tot += len(subject_data[-1])
-			spectrogramTime += end - beg
-
+			spectrogramTime += subject_data[-1].spectrogramTime
 		save_object(subject_data,SAVE_NAME)
-
 	else:
 		with open(SAVE_NAME, 'rb') as input:
 			subject_data = pickle.load(input)
-	spectrogramTime = spectrogramTime / tot
+	spectrogramTime = spectrogramTime / len(subjects)
 
 	INPUT_NUM=subject_data[0].input_numb
 

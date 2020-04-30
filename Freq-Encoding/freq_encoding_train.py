@@ -87,18 +87,11 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 		# Load the dataset and train, val, test splits
 		print("Loading datasets...")
-		if torch.cuda.is_available():
-			torch.cuda.synchronize()
-		beg = int(round(time.time()*1000))
-		BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
-		if torch.cuda.is_available():
-			torch.cuda.synchronize()
-		end = int(round(time.time()*1000))
-		spectrogramTime += (end - beg)/len(BIO_train)
+		BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
+		spectrogramTime += BIO_train.spectrogramTime
 		save_object(BIO_train,SAVE_NAME)
 	with open(SAVE_NAME, 'rb') as input:
 	    BIO_train = pickle.load(input)
-
 	INPUT_NUM=BIO_train.input_numb
 
 	wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
