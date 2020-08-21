@@ -1,7 +1,7 @@
 # Human-Activity-Classification
 
 ## Publication
-<br> [Image Transformation and CNNs: A Strategy for Encoding Human Locomotor Intent for Autonomous Wearable Robots](https://ieeexplore.ieee.org/abstract/document/9134897)
+[Image Transformation and CNNs: A Strategy for Encoding Human Locomotor Intent for Autonomous Wearable Robots](https://ieeexplore.ieee.org/abstract/document/9134897)\
 Ung Hee Lee, Justin Bi, Rishi Patel, David Fouhey, and Elliott Rouse
 
 ## Dataset
