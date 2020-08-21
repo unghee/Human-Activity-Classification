@@ -17,7 +17,6 @@ Create the virtual enviroment and install required packages using [conda](https:
 
 ```
 conda env create --name envname --file environments.yaml
-Download the repoistory:
 ```
 
 For this project we used Python 3.6 on Ubuntu Linux 18.04.
@@ -40,7 +39,7 @@ There are two configuration type: 1. Generic 2. Mode-specific.
 ### Cross Validation type (subject dependencies)
 There are two cross-validation type: 1. Subject Independent, 2. Subject Dependent (Leave-one-out cross validation). 
 
-You can choose which classifier and configuration type by running different python files. 
+You can choose which classifier and configuration to use by running different python files. 
 ```
 python3 [Classifier Type]/[Classifier Configuration]_[Subject Dependedcy].py
 ```
