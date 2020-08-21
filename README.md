@@ -7,7 +7,7 @@ Ung Hee Lee, Justin Bi, Rishi Patel, David Fouhey, and Elliott Rouse
 
 
 ## Dataset
-We used [open-source bilateral and neuromechanical lower-limb dataset](https://figshare.com/articles/Benchmark_datasets_for_bilateral_lower_limb_neuromechanical_signals_from_wearable_sensors_during_unassisted_locomotion_in_able-bodied_individuals/5362627) for validating our intent recognitio system.
+We used [open-source bilateral and neuromechanical lower-limb dataset](https://figshare.com/articles/Benchmark_datasets_for_bilateral_lower_limb_neuromechanical_signals_from_wearable_sensors_during_unassisted_locomotion_in_able-bodied_individuals/5362627) for validating our intent recognition system.
 
 To setup for inference, click the "download all" button, extract into a directory named "Data" in the main repository, and unzip the files within the dataset.
 
