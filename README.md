@@ -1,4 +1,7 @@
 # Human-Activity-Classification
+<br> [Image Transformation and CNNs: A Strategy for Encoding Human Locomotor Intent for Autonomous Wearable Robots](https://ieeexplore.ieee.org/abstract/document/9134897)
+Ung Hee Lee, Justin Bi, Rishi Patel, David Fouhey, and Elliott Rouse
+
 For this project we used Python 3.6 on Ubuntu Linux 18.04.
 
 The dataset was taken from: https://figshare.com/articles/Benchmark_datasets_for_bilateral_lower_limb_neuromechanical_signals_from_wearable_sensors_during_unassisted_locomotion_in_able-bodied_individuals/5362627
