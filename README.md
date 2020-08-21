@@ -60,7 +60,7 @@ University of Michigan
 unghee@umich.edu
 
 Rishi Patel
-Electrical and Computer Engineering  
+Electrical and Computer Engineering    
 University of Michigan  
 patelris@umich.edu  
 
