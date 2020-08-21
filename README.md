@@ -49,6 +49,9 @@ For example, Frequency-Encoding (spectrogram) type and generic configuration and
 ```
 python3 Freq-Encoding/train_freq_loo.py
 ```
+### Laterality and Modality
+The laterlity and modality can be chosen changing the parameter `modes` and `sensors` in `def run_classifier`. User can specifiy one of three types of laterality `bilateral`,`ipsilateral`,`contralateral` and different combniations of sensor modalities `imu`,`emg`,`goin`. 
+
 
 ## Authors
 Ung Hee Lee  
@@ -57,5 +60,13 @@ University of Michigan
 unghee@umich.edu
 
 Rishi Patel
+Electrical and Computer Engineering
+University of Michigan
+patelris@umich.edu
 
 Justin Bi
+Electrical and Computer Engineering
+University of Michigan 
+bijustin@umich.edu
+
+
