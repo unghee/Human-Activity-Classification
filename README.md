@@ -29,9 +29,10 @@ There are different classifiers and configuration types provided in this reposit
 ### Classifier type
 There are three classifier types:
 1. CNN-based spectrogram classifier (Frequency-Encoding, our method)
-2. Feature-based classifiers (Heuristic)
-3. Random Classifier.
+2. Feature-based classifiers (Heuristic)  
 Among Feature-based classifiers you can choose either `LDA` or `SVM` by specifiying the classifiers within the function parameter `classifier` in `def run_classifier`.
+3. Random Classifier.
+
 
 ### Configuration type
 There are two configuration type: 1. Generic 2. Mode-specific. 
@@ -60,12 +61,12 @@ University of Michigan
 unghee@umich.edu
 
 Rishi Patel
-Electrical and Computer Engineering
-University of Michigan
-patelris@umich.edu
+Electrical and Computer Engineering  
+University of Michigan  
+patelris@umich.edu  
 
-Justin Bi
-Electrical and Computer Engineering
+Justin Bi  
+Electrical and Computer Engineering  
 University of Michigan 
 bijustin@umich.edu
 
