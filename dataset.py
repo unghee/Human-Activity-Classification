@@ -23,60 +23,70 @@ import pdb
 
 class EnableDataset(Dataset):
     '''
-    dataDir: path to folder containing data
-    subject_list: the subjects to be included in dataset
-    data_range: the specified circuit trials for each subject
-    window_size: how many samples to consider for a label
-    transform: optional transform to apply to the data
+    Generated using the ENABL3S dataset found here: https://doi.org/10.6084/m9.figshare.5362627
+    Dataset is designed as outlined in: https://ieeexplore.ieee.org/abstract/document/9134897
+
+
+    dataDir:        path to folder containing data
+
+    subject_list:   the subjects to be included in dataset
+
+    model_type:     configures data to be fed into a type of model.
+                        CNN: creates 2D melspectrogram data from the sensor data provided in dataDir
+                        Random_modespecific or Random:  uses 1D sensor data directly from dataDir and provides label of previous data point as well.
+                        LDA or SVM: for feature-based classifiers. Use 1D sensor data directly from dataDir and will NOT provides label of previous data point.
+
+    sensors:        list of sensors to use in dataset. Must be subset of ["imu","emg", "goin"]
+                        imu:  include inertial measurmenet unit data
+                        emg:  include electromyography data
+                        goin: include goniometer data
+
+    mode:           configures the label for each datum. Must be "ipsilateral", "contralateral" or "bilateral"
+                        ipsilateral:   label is the action from the next step of the same foot
+                        contralateral: label is the action from the next step of the opposite foot
+                        bilateral:     label is the action from the next step (same or opposite foot)
+
+
+    CNN Parameters
+    exclude_list:   data files in dataDir that will be excluded. This is if certain files of specific subjects would like to be excluded but not in others.
+
+    mode_specific:  flag to run general (false) or mode_specific (true) configurations
+                        general:        exclude ground-truth, current locomotor activty (previous label) in data point
+                        mode_specific:  include the ground-truth current locomotor activty (previous label) in data point
+
+    data_range:     the specified circuit trials for each subject
+
+    window_size:    how many samples to consider for a label
+
+    transform:      optional torch transform object to apply to the data
+
+    bands:          number of frequency bands in spectrogram
+
+    hop_length:     number of samples between sucessive frames in spectrogram
+
+
+    NN Parameters
+    prevlabel: When provided, will only include data that comes after prevlebel
+
+    delay: Specify a delay in 1D signal data
+
+    phaselabel: Will only include data with specifed leg phase value if prevlabel is provided
     '''
-    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN",mode_specific=False, data_range=(1, 51), window_size=500,  sensors=["imu","emg", "goin"], mode="bilateral", transform=None,bands=None,hop_length=None,phaselabel=None,prevlabel=None,delay=0):
+    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN", exclude_list=[], mode_specific=False, data_range=(1, 51), window_size=500, sensors=["imu","emg", "goin"], mode="bilateral", transform=None, bands=None, hop_length=None, phaselabel=None, prevlabel=None, delay=0):
         self.model_type = model_type
+        self.dataset = []
+        self.prev_label = np.array([], dtype=np.int64)
+
         if self.model_type == "CNN":
-            print("    range: [%d, %d)" % (data_range[0], data_range[1]))
-            self.dataset = []
-            self.prev_label = np.array([], dtype=np.int64)
+            print("\trange: [%d, %d)" % (data_range[0], data_range[1]))
+
             self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
             self.transform = transform
-            self.input_numb = 0
             self.mode_specific=mode_specific
-            self.spectrogramTime = 0.0
 
-            exclude_list = [
-                # # 'AB194_Circuit_009',
-                # # 'AB194_Circuit_017',
-                # # 'AB194_Circuit_018',
-                # # 'AB194_Circuit_026',
-                # # "AB194_Circuit_033",
-                # # "AB194_Circuit_038",
-                # # "AB193_Circuit_022",
-                # # "AB193_Circuit_043",
-                # # "AB192_Circuit_034",
-                # 'AB190_Circuit_013',
-                # # 'AB190_Circuit_014',
-                # # 'AB190_Circuit_037',
-                # 'AB190_Circuit_045',
-                # # "AB191_Circuit_001",
-                # 'AB191_Circuit_002',
-                # 'AB191_Circuit_022',
-                # # "AB191_Circuit_047",
-                # # "AB191_Circuit_049",
-                # "AB189_Circuit_004",
-                # # "AB189_Circuit_024",
-                # "AB189_Circuit_032",
-                # # "AB189_Circuit_035",
-                # # "AB188_Circuit_027",
-                # "AB188_Circuit_032",
-                # "AB186_Circuit_002",
-                # # "AB186_Circuit_004",
-                # # "AB186_Circuit_016",
-                # # "AB186_Circuit_050",
-                # # "AB185_Circuit_002",
-                # "AB185_Circuit_008",
-                # "AB185_Circuit_010",
-                # "AB156_Circuit_005",
-                # "AB156_Circuit_050"
-            ]
-            num = 0
+            self.avgSpectrogramTime = 0.0
+            numSpectrogramsProcessed = 0
+
             for subjects in subject_list:
                 for i in range(data_range[0], data_range[1]):
                     filename = dataDir +'AB' + subjects+'/Processed/'+'AB' + subjects+ '_Circuit_%03d_post.csv'% i
@@ -84,7 +94,6 @@ class EnableDataset(Dataset):
                         print(filename, 'not found or excluded')
                         continue
                     raw_data = pd.read_csv(filename)
-                    # pdb.set_trace()
                     segmented_data = np.array([], dtype=np.int64).reshape(0,window_size,48)
                     labels = np.array([], dtype=np.int64)
                     timestep_type = []
@@ -93,12 +102,13 @@ class EnableDataset(Dataset):
                     index = 0
                     gait_event_types = []
 
+                    # Find the timesteps at which all gait events occur and the action (label) prior to the event.
                     gait_events = ['Right_Heel_Contact','Right_Toe_Off','Left_Heel_Contact','Left_Toe_Off']
                     for event in gait_events:
                         while not pd.isnull(raw_data.loc[index, event]):
                             trigger = raw_data.loc[index, event+'_Trigger']
                             trigger=str(int(trigger))
-                            if float(trigger[2]) != 6 and float(trigger[0]) !=6:
+                            if float(trigger[2]) != 6 and float(trigger[0]) !=6: # exclude data where subject is resting
                                 timesteps.append(raw_data.loc[index, event])
                                 trigger = raw_data.loc[index, event+'_Trigger']
                                 trigger=str(int(trigger))
@@ -120,6 +130,7 @@ class EnableDataset(Dataset):
                             index += 1
                         index = 0
 
+                    # Take raw data at each timesetps collected above, filter it according to the given sensor list and mode and create the melspectrogram.
                     for idx,timestep in enumerate(timesteps):
                         data = raw_data.loc[timestep-window_size-1:timestep-2,:]
                         if timestep-window_size-1 >= 0:
@@ -131,7 +142,6 @@ class EnableDataset(Dataset):
                             else:
                                 data = data.filter(regex="^((?!Heel|Toe).)*$", axis=1)
 
-                            # regex = "(?=Mode"
                             regex = "(?=!Mode"
                             if "imu" in sensors:
                                 regex += "|.*A[xyz].*"
@@ -142,8 +152,8 @@ class EnableDataset(Dataset):
                             regex += ")"
                             data = data.filter(regex=regex, axis=1)
 
+                            # Process data into melspectrogram
                             data = np.array(data)
-                            self.input_numb=np.shape(data)[1]
                             if torch.cuda.is_available():
                                 torch.cuda.synchronize()
                             beg = int(round(time.time()*1000))
@@ -151,16 +161,14 @@ class EnableDataset(Dataset):
                             if torch.cuda.is_available():
                                 torch.cuda.synchronize()
                             end = int(round(time.time()*1000))
-                            self.spectrogramTime += (end - beg) / len(img)
-                            num += 1
+                            self.avgSpectrogramTime += (end - beg) / len(img)
+                            numSpectrogramsProcessed += 1
+
                             if self.mode_specific:
                                 self.dataset.append((img,labels[idx],timestep_type[idx],int(self.prev_label[idx])))
                             else:
                                 self.dataset.append((img,labels[idx], timestep_type[idx]))
         else:
-            self.dataset = []
-            self.prev_label = np.array([], dtype=np.int64)
-
             for subjects in subject_list:
                     filename = dataDir +'AB' + subjects+'/Features/'+'AB' + subjects+ '_Features_'+ str(300-delay) + '.csv'
                     if not os.path.exists(filename):
@@ -173,10 +181,8 @@ class EnableDataset(Dataset):
                     triggers = []
                     index = 0
 
-
-                    # while not pd.isnull(raw_data.loc[index,'Trigger']):
-                    # pdb.set_trace()
                     for index in range(0,raw_data.shape[0]):
+                        # Get time of each gait event
                         trigger = raw_data.loc[index,'Trigger']
                         trigger=str(int(trigger))
                         phase = raw_data.loc[index,'Leg Phase']
@@ -185,6 +191,7 @@ class EnableDataset(Dataset):
                         else:
                             timestep_type.append(0)
 
+                        # Filter by prevlabel, phaselabel and sensor and mode parameters
                         if prevlabel is not None:
                             if float(phase) == phaselabel and float(trigger[0]) == prevlabel and float(trigger[2]) != 6 and float(trigger[0]) !=6:
                                 triggers.append(trigger)
@@ -197,7 +204,6 @@ class EnableDataset(Dataset):
                                 elif mode == "contralateral":
                                     data = data.filter(regex='(?=.*Contra.*|.*Waist.*)', axis=0)
 
-                                # regex = "(?=Mode|.*Ankle.*|.*Knee.*"
                                 regex = "(?=!Mode|.*Ankle.*|.*Knee.*"
                                 if "imu" in sensors:
                                     regex += "|.*A[xyz].*"
@@ -212,6 +218,7 @@ class EnableDataset(Dataset):
                                 self.dataset.append((data.T,label, timestep_type[-1]))
 
                         else:
+                            # Filter by sensor and mode parameters
                             if float(trigger[2]) != 6 and float(trigger[0]) !=6:
 
                                 triggers.append(trigger) # triggers can be used to compare translational and steady-state error
@@ -227,7 +234,6 @@ class EnableDataset(Dataset):
                                 elif mode == "contralateral":
                                     data = data.filter(regex='(?=.*Contra.*|.*Waist.*)', axis=0)
 
-                                # regex = "(?=Mode|.*Ankle.*|.*Knee.*"
                                 regex = "(?=!Mode|.*Ankle.*|.*Knee.*"
                                 if "imu" in sensors:
                                     regex += "|.*A[xyz].*"
@@ -239,18 +245,28 @@ class EnableDataset(Dataset):
                                 data = data.filter(regex=regex, axis=0)
                                 data = np.array(data)
 
-                                # if float(trigger[0]) == 4:
-                                #     print('***********',trigger[0])
                                 self.prev_label = np.append(self.prev_label,[float(trigger[0])], axis =0)
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
-        self.spectrogramTime = self.spectrogramTime / num
+
+        self.avgSpectrogramTime = self.avgSpectrogramTime / numSpectrogramsProcessed
 
 
-
+    '''
+    Return number of data points in dataset
+    '''
     def __len__(self):
         return len(self.dataset)
 
+    '''
+    Return a data point based on the given index
+
+    Based on settings from init, will return some or all of the following:
+        2D spectrogram (if model is CNN) or 1D signal
+        label: ground truth activity
+        timestep type: 1 if current activty is same as next activity. 0 if they differ. Used for transitional vs steady-state accuracy analysis
+        label of previous data point (for Random_modespecific & Random models or when mode_specific flag is true)
+    '''
     def __getitem__(self, index):
         if self.model_type == "CNN":
             if self.mode_specific:
@@ -259,7 +275,6 @@ class EnableDataset(Dataset):
                     img = F.to_pil_image(np.uint8(img))
                     img = self.transform(img)
                     img = np.array(img)
-                    # pdb.set_trace()
                 return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type, prev__label
 
             else:
@@ -276,123 +291,35 @@ class EnableDataset(Dataset):
             else:
                 return img, np.array(label), timestep_type
 
-    def spectrogram2(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
-        vals = []
-        for i in range(0,17):
-	        for x in range(3*i,3*(i+1)):
-	            row = segmented_data[:,x]
-	            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(hamming_windowsize, True), noverlap=5)
-	            tmp, _ = stats.boxcox(Sxx.reshape(-1,1))
-	            Sxx = tmp.reshape(Sxx.shape)-np.min(tmp)
-	            Sxx = Sxx/np.max(Sxx)*255
-	            vals.append(Sxx)
-        out = np.stack(vals, axis=0)
-        return out
+    '''
+    Compute melspectrograms for given data.
 
+    segmented_data: pandas DataFrame where each row corresponds to data sample
+
+    fs:             sampling frequency
+
+    bands:          number of spectrogram bands (height of spectrogram)
+
+    hop_length:     number of samples between sucessive frames
+    '''
     def melspectrogram(self, segmented_data, fs=500,bands=64 ,hop_length=50):
-
-        ###### STACKING UP MULTIPLE SPECTOGRAM APPROACH!
-
         vals = []
-        # for i in range(0,17):
-        #     for x in range(3*i,3*(i+1)):
         for x in range(0,np.shape(segmented_data)[1]):
-
                 row = segmented_data[:,x]
                 melspec_full = librosa.feature.melspectrogram(y=row,sr=fs,n_fft=hop_length*2, hop_length=hop_length,n_mels=bands)
                 logspec_full = librosa.amplitude_to_db(melspec_full)
-                # logspec_delta = librosa.feature.delta(logspec_full) # add derivative
-
-                ## plotting spectro and melspectro
-#                 if x == 30:
-#                     plt.figure(figsize=(10,8))
-#                     plt.rcParams['font.family'] = 'Times New Roman'
-#                     plt.rcParams.update({'font.size': 31})
-#                     # D = librosa.amplitude_to_db(np.abs(librosa.stft(row)), ref=np.max)
-#                     # librosa.display.specshow(D, x_axis='s',y_axis='mel',sr=fs,fmax=fs/2,cmap='viridis')
-#                     f, t, Sxx=signal.spectrogram(row, fs, window=signal.windows.hamming(hop_length*2, True),nfft=hop_length*2, noverlap=hop_length)
-#                     # plt.imshow(spec,aspect='auto',origin='lower',extent=[times.min(),times.max(),freqs.min(),freqs.max()])
-#                     plt.pcolormesh(t, f, 10*np.log10(Sxx),vmin=-80, vmax=0)
-#                     # plt.pcolormesh(t, f, Sxx,norm = matplotlib.colors.Normalize(0,1))
-#                     plt.colorbar(format='%+2.0f dB')
-#                     plt.xlabel('Time (s)')
-#                     plt.ylabel('Hz')
-#                     # plt.title('Linear-frequency power spectrogram')
-#                     plt.yticks(np.array([0,50,100,150,200]), ['0','50','100','150','200'])
-#                     # plt.savefig('./spectro.png')
-#                     plt.show()
-
-#                     plt.figure(figsize=(10,4))
-#                     S_dB = librosa.amplitude_to_db(melspec_full, ref=np.max)
-#                     librosa.display.specshow(S_dB,x_axis='s',hop_length=10,y_axis='linear',sr=fs,fmax=fs/2,cmap='viridis')
-#                     plt.colorbar(format='%+2.0f dB')
-
-#                     locs, labels = plt.xticks()
-#                     plt.yticks(np.array([0,50,100,150,200]), ['0','50','100','150','200'])
-#                     plt.xticks(np.array([0.25,0.5,0.75]), ['0.25','0.50','0.75'])
-#                     plt.show()
-#                     pdb.set_trace()
-
-
                 vals.append(logspec_full)
         return vals
 
+    '''
+    Output dataset statistics
+    Feel free to add other statistic variables
+    '''
+    def __str__(self):
+        return """ EnablesDataset Statistics
+                   Model Type: {}
 
-    def cwt(self, segmented_data, fs=500,hamming_windowsize=30, overlap = 15):
-        vals = []
-        for i in range(0,17):
-            for x in range(3*i,3*(i+1)):
-                row = segmented_data[:,x]
-                widths = np.arange(1,101)
-                cwtmatr = signal.cwt(row, signal.ricker, widths)
-                print(cwtmatr.shape, np.min(cwtmatr), np.max(cwtmatr))
-                cwtmatr = cwtmatr-np.min(cwtmatr)
-                cwtmatr = cwtmatr/np.max(cwtmatr)*255
-                vals.append(cwtmatr)
+                   Dataset size: {}
+                   Average spectrogram processing time: {}
+               """.format(self.model_type, len(self), self.avgSpectrogramTime if self.model_type == "CNN" else "N/A")
 
-
-        out = np.stack(vals, axis=0)
-        out=out.astype(np.uint8)
-        return out
-
-
-    def spectrogram(self, segmented_data, fs=500, hamming_windowsize=10):
-        vals1 = []
-        for x in range(3):
-            row = segmented_data[y,:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(100, True), noverlap=50)
-            fig = plt.figure()
-            ax = fig.add_axes([0.,0.,1.,1.])
-            fig.set_size_inches((5,5))
-            ax.pcolormesh(t, f, Sxx, cmap='gray')
-            ax.axis('off')
-            fig.add_axes(ax)
-            fig.canvas.draw()
-            # this rasterized the figure
-            X = np.array(fig.canvas.renderer._renderer)
-            X = 0.2989*X[:,1] + 0.5870*X[:,2] + 0.1140*X[:,3]
-            vals1.append(X)
-            plt.close()
-        vals2 = []
-        for x in range(6,9):
-            row = segmented_data[y,:,x]
-            f, t, Sxx = signal.spectrogram(row, fs, window=signal.windows.hamming(100, True), noverlap=50)
-            fig = plt.figure()
-            ax = fig.add_axes([0.,0.,1.,1.])
-            fig.set_size_inches((5,5))
-            ax.pcolormesh(t, f, Sxx, cmap='gray')
-            ax.axis('off')
-            fig.add_axes(ax)
-            fig.canvas.draw()
-            # this rasterized the figure
-            X = np.array(fig.canvas.renderer._renderer)
-            X = 0.2989*X[:,1] + 0.5870*X[:,2] + 0.1140*X[:,3]
-            vals2.append(X)
-            plt.close()
-
-        out1 = np.stack(vals1, axis=2).astype(np.uint8)
-        out2 = np.stack(vals2, axis=2).astype(np.uint8)
-        out = np.hstack((out1, out2))
-        cv2.imshow("ret", out)
-        cv2.waitKey(0)
-        return ret

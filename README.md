@@ -23,50 +23,57 @@ For this project we used Python 3.6 on Ubuntu Linux 18.04.
 
 ## Running the project
 
-There are different classifiers and configuration types provided in this repository. 
+There are different classifiers and configuration types provided in this repository.
 
 ### Classifier type
 There are three classifier types:
 1. CNN-based spectrogram classifier (Frequency-Encoding, our method)
-2. Feature-based classifiers (Heuristic)  
+2. Feature-based classifiers (Heuristic)
 Among Feature-based classifiers you can choose either `LDA` or `SVM` by specifiying the classifiers within the function parameter `classifier` in `def run_classifier`.
 3. Random Classifier.
 
 
 ### Configuration type
-There are two configuration type: 1. Generic 2. Mode-specific. 
+There are two configuration type: 1. Generic 2. Mode-specific.
 
 ### Cross Validation type (subject dependencies)
-There are two cross-validation type: 1. Subject Independent, 2. Subject Dependent (Leave-one-out cross validation). 
+There are two cross-validation type: 1. Subject Independent, 2. Subject Dependent (Leave-one-out cross validation).
 
-You can choose which classifier and configuration to use by running different python files. 
+You can choose which classifier and configuration to use by running different python files.
 ```
 python3 [Classifier Type]/[Classifier Configuration]_[Subject Dependedcy].py
 ```
 
-For example, Frequency-Encoding (spectrogram) type and generic configuration and subject independent case, run 
+For example, Frequency-Encoding (spectrogram) type and generic configuration and subject independent case, run
 
 ```
 python3 Freq-Encoding/train_freq_loo.py
 ```
 ### Laterality and Modality
-The laterlity and modality can be chosen changing the parameter `modes` and `sensors` in `def run_classifier`. User can specifiy one of three types of laterality `bilateral`,`ipsilateral`,`contralateral` and different combniations of sensor modalities `imu`,`emg`,`goin`. 
+The laterlity and modality can be chosen changing the parameter `modes` and `sensors` in `def run_classifier`. User can specifiy one of three types of laterality `bilateral`,`ipsilateral`,`contralateral` and different combniations of sensor modalities `imu`,`emg`,`goin`.
 
+## Implementing Custom Dataset
+The general outline to creating your own PyTorch Dataset can be found [here](https://pytorch.org/tutorials/beginner/data_loading_tutorial.html). In order for the Dataset to interface with a particular classifier and configuration, the \__getitem__ method must return a tuple containing some or all of the following:
+
+1. Data: For CNN classifiers must be 10x50 FloatTensor. For all other classifiers must be 1xn NumPy array.
+2. Label: For CNN classifiers must be 1x1 FloatTensor. For all other classifiers must be 1x1 NumPy array.
+3. SteadyStateFlag: 1 when current label matches label of previous data point. 0 if they differ. Used for transitional vs steady-state accuracy analysis.
+4. PreviousLabel: Only implemented for Mode-specific configurations or Random classifiers. Label of previous data point.
 
 ## Authors
-Ung Hee Lee  
-Mechanical Engineering  
-University of Michigan  
+Ung Hee Lee
+Mechanical Engineering
+University of Michigan
 unghee@umich.edu
 
 Rishi Patel
-Electrical and Computer Engineering    
-University of Michigan  
-patelris@umich.edu  
+Electrical and Computer Engineering
+University of Michigan
+patelris@umich.edu
 
-Justin Bi  
-Electrical and Computer Engineering  
-University of Michigan 
+Justin Bi
+Electrical and Computer Engineering
+University of Michigan
 bijustin@umich.edu
 
 
