@@ -69,7 +69,7 @@ dependencies:
   - numpy-base=1.17.3=py37hde5b4d6_0
   - olefile=0.46=py37_0
   - opencv=3.4.2=py37h6fd60c2_1
-  - openssl=1.1.1=h7b6447c_0
+ # - openssl=1.1.1=h7b6447c_0
   - pcre=8.43=he1b5a44_0
   - pillow=6.2.1=py37h34e0f95_0
   - pip=19.3.1=py37_0

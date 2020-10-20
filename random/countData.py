@@ -1,84 +1,50 @@
-import sys,os
+#this file implements the mode specific and random guesser baseline classifiers.
+import sys
+import os
 sys.path.append('.')
 sys.path.append('../')
 import numpy as np
-import matplotlib.pyplot as plt
-from tqdm import tqdm # Displays a progress bar
-
-import torch
-from torch import nn
-from torch import optim
-import torch.nn.functional as F
-from torchvision import datasets, transforms
+from tqdm import tqdm 
 from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset
-
 from dataset import EnableDataset
-
-import pickle
-
 from sklearn.model_selection import KFold, StratifiedKFold,ShuffleSplit ,train_test_split
-
-import copy
-import os
-import random
-
 
 from utils import *
 from networks import *
 
-BATCH_SIZE = 32
-LEARNING_RATE = 1e-5
-WEIGHT_DECAY = 1e-3
-NUMB_CLASS = 5
-NUB_EPOCH= 200
+#parameters
 numfolds = 10
 DATA_LOAD_BOOL = True
-
-SAVING_BOOL = True
-
 MODE = 'bilateral'
 CLASSIFIER = 'Random_modespecific'
 SENSOR = ["imu","emg","goin"]
-sensor_str='_'.join(SENSOR)
 
-RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + '_accuracy.txt'
+#load the whole dataset
+BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),
+						 bands=10,hop_length=10,mode_specific = True,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
 
-if not os.path.exists('./results/'+CLASSIFIER):
-		os.makedirs('./results/'+CLASSIFIER)
 
-# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 51),bands=10,hop_length=10,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
-BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 4),bands=10,hop_length=10,mode_specific = True,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
-
-# save_object(BIO_train,'count_Data_features.pkl')
-
-# with open('count_Data_features.pkl', 'rb') as input:
-# 	   BIO_train = pickle.load(input)
-
+#count number of occurences of data, based on previous walking mode and next walking mode
 vals = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
-# vals = [[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]]
-# vals = [[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]]
+
 for img, labels,trigger,_ in BIO_train:
-    # vals[trigger.astype(int)][labels.astype(int)]+=1
+
     vals[int(trigger)-1][int(labels)-1]+=1
-    # if int(trigger) == 4:
-    # 	print(trigger)
+
 vals = np.array(vals)
 
 
-
+#mode specific classifier baseline: assume knowledge of previous mode
 if CLASSIFIER =='Random_modespecific':
 	overall_acc= np.sum(np.max(vals,0))/np.sum(vals)
-
-	print(overall_acc)
-
+	print("Random mode specific error: ", overall_acc)
 	if np.max(vals).all() == np.diag(vals).all():
 		ss_acc = 1
 		tr_acc = 0 
 
+#random guesser baseline: predict based on distribution of samples
 elif CLASSIFIER =="Random":
 	overall_acc= np.sum(vals[:,0])/np.sum(vals)
-
-	
 	ss_acc = vals[0][0]/np.sum(np.diag(vals))
 	tr_acc = np.sum(vals[1:,0])/(np.sum(vals)-np.sum(np.diag(vals)))
 
@@ -88,9 +54,10 @@ elif CLASSIFIER =="Random":
 
 del vals
 
+#load training dataset
 wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
-
+#split dataset by number of folds
 for batch, label, trigger,dtype in tqdm(wholeloader,disable=DATA_LOAD_BOOL):
 	X = batch
 	y = label
@@ -104,12 +71,14 @@ overall_accs = []
 ss_accs = []
 tr_accs = []
 
+#validate classifier through k-fold cross validation 
 for train_index, test_index in skf.split(X, y):
 	train_vals = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
 	test_vals = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
 
 	print("######################Fold:{}#####################".format(i+1))
 
+	#split dataset
 	X_train, X_test = X[train_index], X[test_index]
 	y_train, y_test = y[train_index], y[test_index]
 	trigger_train, trigger_test = tri[train_index], tri[test_index]
@@ -118,13 +87,14 @@ for train_index, test_index in skf.split(X, y):
 	train_dataset = TensorDataset( X_train, y_train, trigger_train)
 	test_dataset = TensorDataset( X_test, y_test, trigger_test)
 
+	#get distribution based on fold
 	for img, labels, trigger in train_dataset:
 		train_vals[int(trigger)-1][int(labels)-1]+=1
 
 	for img, labels, trigger in test_dataset:
 		test_vals[int(trigger)-1][int(labels)-1]+=1
 
-	print(test_vals)
+	#print(test_vals)
 	test_vals=np.array(test_vals)
 	train_vals=np.array(train_vals)
 
@@ -133,7 +103,6 @@ for train_index, test_index in skf.split(X, y):
 		if np.argmax(train_vals,1).all() == np.array([0,1,2,3,4]).all():
 
 			overall_acc= np.sum(np.max(test_vals,0))/np.sum(test_vals)
-			# pdb.set_trace()
 			overall_accs.append(overall_acc)
 			print(overall_acc)
 
@@ -170,6 +139,10 @@ for train_index, test_index in skf.split(X, y):
 	i +=1
 
 
+#write results
+if not os.path.exists('./results/'+CLASSIFIER):
+		os.makedirs('./results/'+CLASSIFIER)
+RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + '_accuracy.txt'
 print('writing...')
 with open(RESULT_NAME, 'w') as f:
 	f.write('total ')

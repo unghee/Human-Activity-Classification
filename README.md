@@ -16,7 +16,7 @@ To setup for inference, click the "download all" button, extract into a director
 Create the virtual enviroment and install required packages using [conda](https://www.anaconda.com/).
 
 ```
-conda env create --name envname --file environments.yaml
+conda env create --name envname --file environment.yaml
 ```
 
 For this project we used Python 3.6 on Ubuntu Linux 18.04.
