@@ -30,11 +30,11 @@ There are three classifier types:
 1. CNN-based spectrogram classifier (Frequency-Encoding, our method)
 2. Feature-based classifiers (Heuristic)
 Among Feature-based classifiers you can choose either `LDA` or `SVM` by specifiying the classifiers within the function parameter `classifier` in `def run_classifier`.
-3. Random Classifier.
+3. Random Classifier. 
 
 
 ### Configuration type
-There are two configuration type: 1. Generic 2. Mode-specific.
+There are two configuration type: 1. Generic 2. Mode-specific. To change this, change the parameter "CLASSIFIER" within the respective file.
 
 ### Cross Validation type (subject dependencies)
 There are two cross-validation type: 1. Subject Independent, 2. Subject Dependent (Leave-one-out cross validation).
@@ -43,6 +43,7 @@ You can choose which classifier and configuration to use by running different py
 ```
 python3 [Classifier Type]/[Classifier Configuration]_[Subject Dependedcy].py
 ```
+Note that for the random classifiers, countData is used to validate the subject independent case, and random_loo is used to validate the subject dependent case.
 
 For example, Frequency-Encoding (spectrogram) type and generic configuration and subject independent case, run
 
