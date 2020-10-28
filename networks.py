@@ -81,35 +81,5 @@ class Network_modespecific(nn.Module):
         return x
 
 
-class MyResNet18(ResNet):
-
-    def __init__(self):
-        super(MyResNet18, self).__init__(BasicBlock, [2, 2, 2, 2])
-
-    def forward(self, x):
-        # change forward here
-        # pdb.set_trace()
-        x1=x[0]
-        y=x[1]
-
-
-        x1 = self.conv1(x1)
-        x1 = self.bn1(x1)
-        x1 = self.relu(x1)
-        x1 = self.maxpool(x1)
-
-        x1 = self.layer1(x1)
-        x1= self.layer2(x1)
-        x1 = self.layer3(x1)
-        x1 = self.layer4(x1)
-
-        x1 = self.avgpool(x1)
-        x1 = torch.flatten(x1, 1)
-        # pdb.set_trace()
-        x1 = torch.cat((x1,y),1)
-        x1= self.fc(x1)
-
-        return x1
-
 
 
