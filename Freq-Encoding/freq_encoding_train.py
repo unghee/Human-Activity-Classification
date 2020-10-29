@@ -52,12 +52,12 @@ def run_classifier(args):
 	        		'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pth'
 
 	if MODE_SPECIFIC_BOOL:
-		RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + NN_model+'_'+MODE+'_'+sensor_str+'_mode_specific'+'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_accuracy.txt'
+		RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + NN_model+'_mode_specific'+'_'+MODE+'_'+sensor_str+'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_accuracy.txt'
 	else:
 		RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + NN_model+'_'+MODE+'_'+sensor_str+'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_accuracy.txt'
 
 	if MODE_SPECIFIC_BOOL:
-		SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'mode_specific'+'.pkl'
+		SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_mode_specific'+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pkl'
 	else:
 		SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER +'_'+MODE+'_'+sensor_str+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'.pkl'
 
@@ -86,7 +86,6 @@ def run_classifier(args):
 
 	wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
-
 	device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 	print('GPU USED?',torch.cuda.is_available())
 
@@ -100,10 +99,9 @@ def run_classifier(args):
 			top_layer= nn.Conv2d(IN_CHANNELS, 3, kernel_size=5, stride=1, padding=2)
 			model.fc = nn.Linear(num_ftrs, NUMB_CLASS)
 			model = nn.Sequential(top_layer,model)
-			
-
 		else:
 			model = Network(IN_CHANNELS,NUMB_CLASS)
+
 	model = model.to(device)
 
 	criterion = nn.CrossEntropyLoss()
@@ -240,9 +238,9 @@ def run_classifier(args):
 			for m in range(0,numfolds):
 				f.write("%s " % class_acc_list[m][j])
 		f.write('\n')
-
-		f.write('spectrogram time %s' % spectrogramTime)
-		f.write('\n')
+		if args.data_saving:
+			f.write('spectrogram time %s' % spectrogramTime)
+			f.write('\n')
 		f.write('inference time %s' % inferenceTime)
 
 	f.close()
@@ -261,13 +259,13 @@ def run_classifier(args):
 
 
 
-"""This block parses command line arguments and runs the training/testing main block"""
+"""This block parses command line arguments and runs the main code"""
 import argparse
 
 p = argparse.ArgumentParser()
-p.add_argument("--classifiers", default="CNN", help="classifier types: CNN, SVM, LDA")
+p.add_argument("--classifiers", default="CNN", help="classifier types: CNN")
 p.add_argument("--sensors", nargs="+", default=["imu","emg","gon"], help="select combinations of sensor modality types: img, emg, gonio")
-p.add_argument("--num_sensors", default=3, help="select number of sensor modality types: 1 - 3 ")
+p.add_argument("--all_comb", dest='all_comb', action='store_true', help="loop through all combinations")
 p.add_argument("--laterality", default='bilateral', type=str, help="select laterality types, bilateral, ipsilateral, contralateral")
 p.add_argument("--nn_architecture", default='LIRNET',type=str,help="select nn architectures: LIRNET, RESNET")
 p.add_argument("--mode_specific", action='store_true', help="mode specific configuration")
@@ -287,14 +285,18 @@ p.set_defaults(mode_specific=False)
 p.set_defaults(data_saving=True)
 p.set_defaults(progressbar=True)
 p.set_defaults(val_on=False)
+p.set_defaults(all_comb=False)
 
 args = p.parse_args()
 
-for i in range(args.num_sensors,4):
+comb_number = len(args.sensors)
+
+for i in range(comb_number,4):
+	print('Number of sensors range:' , i ,'to',len(args.sensors))
 	for combo in combinations(args.sensors,i):
 		sensor = [item for item in combo]
 		print("Classifer type: ", args.classifiers)
-		print("Sensor modality: ", args.sensors)
+		print("Sensor modality: ", sensor)
 		print("Sensor laterality: ", args.laterality)
 		if args.mode_specific:
 			print("Classifier config: mode specific")
@@ -306,9 +308,9 @@ for i in range(args.num_sensors,4):
 		if args.classifiers == "CNN":
 			print("NN architecture: ",args.nn_architecture)
 		if args.val_on:
-			print("k fold validation")
+			print("Data Divison: k fold validation")
 		else:
-			print("8:1:1 split")
+			print("Data Divison: 8:1:1 split")
 
 		run_classifier(args)
 

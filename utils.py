@@ -150,6 +150,7 @@ class trainclass():
 		                torch.cuda.synchronize()
 		            end = int(round(time.time()*1000))
 		            inferenceTime += end - beg
+
 		            totalloss += self.criterion(pred, label)
 		            count +=1
 		            preds.extend((torch.argmax(pred,dim=1)).tolist())

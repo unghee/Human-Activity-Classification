@@ -173,6 +173,7 @@ class EnableDataset(Dataset):
                                 self.dataset.append((img,labels[idx],timestep_type[idx],int(self.prev_label[idx])))
                             else:
                                 self.dataset.append((img,labels[idx], timestep_type[idx]))
+            self.avgSpectrogramTime = self.avgSpectrogramTime / numSpectrogramsProcessed
         else:
             for subjects in subject_list:
                     filename = dataDir +'AB' + subjects+'/Features/'+'AB' + subjects+ '_Features_'+ str(300-delay) + '.csv'
@@ -254,7 +255,8 @@ class EnableDataset(Dataset):
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
 
-        self.avgSpectrogramTime = self.avgSpectrogramTime / numSpectrogramsProcessed
+
+
 
 
     '''
@@ -278,7 +280,6 @@ class EnableDataset(Dataset):
                 img, label, timestep_type, prev__label= self.dataset[index]
                 one_hot_embed= torch.eye(5)
                 one_hot_label=one_hot_embed[prev__label]
-                # pdb.set_trace()
                 if self.transform:
                     img = F.to_pil_image(np.uint8(img))
                     img = self.transform(img)
