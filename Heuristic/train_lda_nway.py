@@ -112,7 +112,7 @@ def run_classifier(args):
 		for j in range(1,len_phase+1):
 			print("**************mode #", i, "****phase", j)
 
-			for batch, label, dtype in tqdm(wholeloaders[k]):
+			for batch, label, dtype in tqdm(wholeloaders[k], disable=args.progressbar):
 				X = batch
 				y = label
 				types = dtype
@@ -236,11 +236,13 @@ p.add_argument("--sensors", nargs="+", default=["imu","emg","gon"], help="select
 p.add_argument("--all_comb", dest='all_comb', action='store_true', help="loop through all combinations")
 p.add_argument("--laterality", default='bilateral', type=str, help="select laterality types, bilateral, ipsilateral, contralateral")
 p.add_argument("--data_skip", dest='data_saving', action='store_false', help="skip the dataset saving/loading")
+p.add_argument("--show_progress", dest='progressbar', action='store_false', help="show tqdm progress bar")
 
 args = p.parse_args()
 
 p.set_defaults(data_saving=True)
 p.set_defaults(all_comb=False)
+p.set_defaults(progressbar=True)
 
 comb_number = len(args.sensors)
 

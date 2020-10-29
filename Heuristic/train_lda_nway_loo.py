@@ -124,23 +124,25 @@ def run_classifier(args):
 			m = 0
 
 			for train_index, test_index in skf.split(BIO_trains[k]):
-				print(train_index,test_index)
-				print("######################Fold:{}#####################".format(m+1))
+				# print(train_index,test_index)
+				# print("######################Fold:{}#####################".format(m+1))
 				subject_data=BIO_trains[k] 
 				train_set = [subject_data[i] for i in train_index]
 				test_set = [subject_data[i] for i in test_index]
 				BIO_train = torch.utils.data.ConcatDataset(train_set)
 				wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
-				for batch, label, dtype in tqdm(wholeloader):
+
+				for batch, label, dtype in tqdm(wholeloader, disable=args.progressbar):
 					X_train = batch
 					y_train = label
 					types_train = dtype
+
 				BIO_train = None
 				train_set = None
 
 				BIO_test = torch.utils.data.ConcatDataset(test_set)
 				wholeloader = DataLoader(BIO_test, batch_size=len(BIO_test))
-				for batch, label, dtype in tqdm(wholeloader):
+				for batch, label, dtype in tqdm(wholeloader, disable=args.progressbar):
 					X_test = batch
 					y_test = label
 					types_test = dtype
@@ -256,11 +258,13 @@ p.add_argument("--sensors", nargs="+", default=["imu","emg","gon"], help="select
 p.add_argument("--all_comb", dest='all_comb', action='store_true', help="loop through all combinations")
 p.add_argument("--laterality", default='bilateral', type=str, help="select laterality types, bilateral, ipsilateral, contralateral")
 p.add_argument("--data_skip", dest='data_saving', action='store_false', help="skip the dataset saving/loading")
+p.add_argument("--show_progress", dest='progressbar', action='store_false', help="show tqdm progress bar")
 
 args = p.parse_args()
 
 p.set_defaults(data_saving=True)
 p.set_defaults(all_comb=False)
+p.set_defaults(progressbar=True)
 
 comb_number = len(args.sensors)
 
