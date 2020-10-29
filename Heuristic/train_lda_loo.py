@@ -5,10 +5,13 @@ from tqdm import tqdm # Displays a progress bar
 
 import sys,os
 sys.path.append('.')
+from utils import *
 
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from dataset import EnableDataset
+
+import pickle
 
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, StratifiedKFold,train_test_split, cross_val_score
@@ -20,24 +23,34 @@ import os
 
 from itertools import combinations
 
-def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]):
+def run_classifier(args):
 
-	MODE = mode
-	CLASSIFIER = classifier
-	SENSOR = sensor
+	########## PRAMETER SETTINGS  ########################
+	MODE = args.laterality
+	CLASSIFIER = args.classifiers
+	SENSOR = args.sensors
+	############################################
+
 	sensor_str='_'.join(SENSOR)
-
 
 	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_subjects_accuracy.txt'
 
+	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER +'_'+MODE+'_'+sensor_str+'_subjects.pkl'
 
 	if not os.path.exists('./results/'+CLASSIFIER):
 		os.makedirs('./results/'+CLASSIFIER)
 
 	subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
 	subject_data = []
-	for subject in subjects:
-		subject_data.append(EnableDataset(subject_list= [subject],model_type=CLASSIFIER,sensors=SENSOR,mode=MODE))
+
+	if args.data_saving:
+		print("Loading datasets...")
+		for subject in subjects:
+			subject_data.append(EnableDataset(subject_list= [subject],model_type=CLASSIFIER,sensors=SENSOR,mode=MODE))
+		save_object(subject_data,SAVE_NAME)
+	else:
+		with open(SAVE_NAME, 'rb') as input:
+			subject_data = pickle.load(input)
 
 	correct=0
 	steady_state_correct = 0
@@ -137,15 +150,9 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 
 		i +=1
 	print('********************SUMMARY*****************************')
-	# print('Accuracy_total:', correct/len(BIO_train))
 	print('Accuracy_,mean:', np.mean(accuracies),'Accuracy_std: ', np.std(accuracies))
 	print('SR Accuracy_,mean:', np.mean(ss_accuracies),'Accuracy_std: ', np.std(ss_accuracies))
 	print('TR Accuracy_,mean:', np.mean(tr_accuracies),'Accuracy_std: ', np.std(tr_accuracies))
-	# model.fit(X_train, y_train)
-	# total_accuracies = accuracies + ss_accuracies + tr_accuracies
-
-
-
 
 	print('writing...')
 	with open(RESULT_NAME, 'w') as f:
@@ -167,17 +174,36 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 	f.close()
 
 
-classifiers=['LDA']
-# sensors=["emg"]
-sensors=["imu","emg","goin"]
-modes = ['bilateral']
-# modes = ['bilateral','ipsilateral','contralateral']
-for classifier in classifiers:
-	for i in range(3,4):
-		for combo in combinations(sensors,i):
-			sensor = [item for item in combo]
-			for mode in modes:
-				print(classifier, sensor, mode)
-				run_classifier(mode=mode,classifier=classifier,sensor=sensor)
+"""This block parses command line arguments and runs the main code"""
+import argparse
+
+p = argparse.ArgumentParser()
+p.add_argument("--classifiers", default="LDA", help="classifier types: LDA, SVM")
+p.add_argument("--sensors", nargs="+", default=["imu","emg","gon"], help="select combinations of sensor modality types: img, emg, gonio")
+p.add_argument("--all_comb", dest='all_comb', action='store_true', help="loop through all combinations")
+p.add_argument("--laterality", default='bilateral', type=str, help="select laterality types, bilateral, ipsilateral, contralateral")
+p.add_argument("--data_skip", dest='data_saving', action='store_false', help="skip the dataset saving/loading")
+
+args = p.parse_args()
+
+p.set_defaults(data_saving=True)
+p.set_defaults(all_comb=False)
+
+comb_number = len(args.sensors)
+
+if args.all_comb:
+	print('looping through all combinations, overriding sensor selection')
+	args.sensors = ["imu","emg","gon"]
+	comb_number = 1
+
+for i in range(comb_number,4):
+	print('Number of sensors range:' , i ,'to',len(args.sensors))
+	for combo in combinations(args.sensors,i):
+		sensor = [item for item in combo]
+		print("Classifer type: ", args.classifiers)
+		print("Sensor modality: ", sensor)
+		print("Sensor laterality: ", args.laterality)
+
+		run_classifier(args)
 
 
