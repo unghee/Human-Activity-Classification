@@ -1,6 +1,6 @@
 # Activation Mapping
 Creates activation of the network, which shows activated nodes. This demonstrates the area within the gait cycle which is most responsible for the intent recognition.
-![Image of network activation](https://ieeexplore.ieee.org/mediastore_new/IEEE/content/media/7083369/9133350/9134897/rouse5-3007455-large.gif){:height="700px" width="400px"}
+![Image of network activation](https://ieeexplore.ieee.org/mediastore_new/IEEE/content/media/7083369/9133350/9134897/rouse5-3007455-large.gif| width=100)
 
  
 ## How to run
