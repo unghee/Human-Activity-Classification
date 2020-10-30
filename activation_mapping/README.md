@@ -1,5 +1,6 @@
 # Activation Mapping
-
+Creates activation of the network, which shows activated nodes. This demonstrates the area within the gait cycle which is most responsible for the intent recognition.
+ 
 ## How to run
 1. run `mask_gen.py`
 2. run `mapping.py`
