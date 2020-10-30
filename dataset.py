@@ -36,10 +36,10 @@ class EnableDataset(Dataset):
                         Random_modespecific or Random:  uses 1D sensor data directly from dataDir and provides label of previous data point as well.
                         LDA or SVM: for feature-based classifiers. Use 1D sensor data directly from dataDir and will NOT provides label of previous data point.
 
-    sensors:        list of sensors to use in dataset. Must be subset of ["imu","emg", "goin"]
+    sensors:        list of sensors to use in dataset. Must be subset of ["imu","emg", "gon"]
                         imu:  include inertial measurmenet unit data
                         emg:  include electromyography data
-                        goin: include goniometer data
+                        gon: include goniometer data
 
     mode:           configures the label for each datum. Must be "ipsilateral", "contralateral" or "bilateral"
                         ipsilateral:   label is the action from the next step of the same foot
@@ -64,6 +64,8 @@ class EnableDataset(Dataset):
 
     hop_length:     number of samples between sucessive frames in spectrogram
 
+    in_channels:    number of channels in the input data
+
 
     NN Parameters
     prevlabel: When provided, will only include data that comes after prevlebel
@@ -72,7 +74,7 @@ class EnableDataset(Dataset):
 
     phaselabel: Will only include data with specifed leg phase value if prevlabel is provided
     '''
-    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN", exclude_list=[], mode_specific=False, data_range=(1, 51), window_size=500, sensors=["imu","emg", "goin"], mode="bilateral", transform=None, bands=None, hop_length=None, phaselabel=None, prevlabel=None, delay=0):
+    def __init__(self, dataDir='./Data/', subject_list=['156'], model_type="CNN", exclude_list=[], mode_specific=False, data_range=(1, 51), window_size=500, sensors=["imu","emg", "gon"], mode="bilateral", transform=None, bands=None, hop_length=None, phaselabel=None, prevlabel=None, delay=0):
         self.model_type = model_type
         self.dataset = []
         self.prev_label = np.array([], dtype=np.int64)
@@ -83,6 +85,7 @@ class EnableDataset(Dataset):
             self.img_data_stack=np.empty((51, 3, 4, 51), dtype=np.int64)
             self.transform = transform
             self.mode_specific=mode_specific
+            self.in_channels = 0
 
             self.avgSpectrogramTime = 0.0
             numSpectrogramsProcessed = 0
@@ -145,7 +148,7 @@ class EnableDataset(Dataset):
                             regex = "(?=!Mode"
                             if "imu" in sensors:
                                 regex += "|.*A[xyz].*"
-                            if "goin" in sensors:
+                            if "gon" in sensors:
                                 regex += "|.*G[xyz].*|.*Ankle.*|.*Knee.*"
                             if "emg" in sensors:
                                 regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
@@ -154,6 +157,8 @@ class EnableDataset(Dataset):
 
                             # Process data into melspectrogram
                             data = np.array(data)
+                            self.in_channels=np.shape(data)[1]
+
                             if torch.cuda.is_available():
                                 torch.cuda.synchronize()
                             beg = int(round(time.time()*1000))
@@ -168,6 +173,7 @@ class EnableDataset(Dataset):
                                 self.dataset.append((img,labels[idx],timestep_type[idx],int(self.prev_label[idx])))
                             else:
                                 self.dataset.append((img,labels[idx], timestep_type[idx]))
+            self.avgSpectrogramTime = self.avgSpectrogramTime / numSpectrogramsProcessed
         else:
             for subjects in subject_list:
                     filename = dataDir +'AB' + subjects+'/Features/'+'AB' + subjects+ '_Features_'+ str(300-delay) + '.csv'
@@ -207,7 +213,7 @@ class EnableDataset(Dataset):
                                 regex = "(?=!Mode|.*Ankle.*|.*Knee.*"
                                 if "imu" in sensors:
                                     regex += "|.*A[xyz].*"
-                                if "goin" in sensors:
+                                if "gon" in sensors:
                                     regex += "|.*G[xyz].*|.*Ankle.*|.*Knee.*"
                                 if "emg" in sensors:
                                     regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
@@ -237,7 +243,7 @@ class EnableDataset(Dataset):
                                 regex = "(?=!Mode|.*Ankle.*|.*Knee.*"
                                 if "imu" in sensors:
                                     regex += "|.*A[xyz].*"
-                                if "goin" in sensors:
+                                if "gon" in sensors:
                                     regex += "|.*G[xyz].*|.*Ankle.*|.*Knee.*"
                                 if "emg" in sensors:
                                     regex += "|.*TA.*|.*MG.*|.*SOL.*|.*BF.*|.*ST.*|.*VL.*|.*RF.*"
@@ -249,7 +255,8 @@ class EnableDataset(Dataset):
 
                                 self.dataset.append((data.T,label, timestep_type[-1]))
 
-        self.avgSpectrogramTime = self.avgSpectrogramTime / numSpectrogramsProcessed
+
+
 
 
     '''
@@ -271,11 +278,14 @@ class EnableDataset(Dataset):
         if self.model_type == "CNN":
             if self.mode_specific:
                 img, label, timestep_type, prev__label= self.dataset[index]
+                one_hot_embed= torch.eye(5)
+                one_hot_label=one_hot_embed[prev__label]
                 if self.transform:
                     img = F.to_pil_image(np.uint8(img))
                     img = self.transform(img)
                     img = np.array(img)
-                return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type, prev__label
+                # return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type, prev__label
+                return torch.FloatTensor(img), torch.LongTensor(np.array(label)), timestep_type, one_hot_label
 
             else:
                 img, label, timestep_type = self.dataset[index]

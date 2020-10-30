@@ -1,15 +1,10 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-
 from tqdm import tqdm # Displays a progress bar
-
 import sys,os
-sys.path.append('.')
-
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from dataset import EnableDataset
-
+import pickle
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, StratifiedKFold,train_test_split, cross_val_score
 from sklearn import preprocessing
@@ -17,27 +12,50 @@ from sklearn.decomposition import PCA, sparse_encode
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 import os
-
 from itertools import combinations
+import argparse
 
-def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]):
+sys.path.append('.')
+from utils import *
+from dataset import EnableDataset
 
-	MODE = mode
-	CLASSIFIER = classifier
-	SENSOR = sensor
+def run_classifier(args):
+	"""
+	Main function runs training and testing of Heuristic based machine
+	learning models (SVM, LDA)
+
+	Input: argument passes through argparse. Each argument is described
+	in the --help of each arguments.
+	Output: No return, but generates a .txt file results of testing
+	including accuracy of the models.
+	"""
+	########## PRAMETER SETTINGS  ##############
+	MODE = args.laterality
+	CLASSIFIER = args.classifiers
+	SENSOR = args.sensors
+	############################################
+
 	sensor_str='_'.join(SENSOR)
-
 
 	RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER+'_'+MODE+'_'+sensor_str+'_subjects_accuracy.txt'
 
+	SAVE_NAME= './checkpoints/'+CLASSIFIER+'/'+CLASSIFIER +'_'+MODE+'_'+sensor_str+'_subjects.pkl'
 
 	if not os.path.exists('./results/'+CLASSIFIER):
 		os.makedirs('./results/'+CLASSIFIER)
 
 	subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
 	subject_data = []
-	for subject in subjects:
-		subject_data.append(EnableDataset(subject_list= [subject],model_type=CLASSIFIER,sensors=SENSOR,mode=MODE))
+
+	# Loading/saving the ENABL3S dataset
+	if args.data_saving:
+		print("Loading datasets...")
+		for subject in subjects:
+			subject_data.append(EnableDataset(subject_list= [subject],model_type=CLASSIFIER,sensors=SENSOR,mode=MODE))
+		save_object(subject_data,SAVE_NAME)
+	else:
+		with open(SAVE_NAME, 'rb') as input:
+			subject_data = pickle.load(input)
 
 	correct=0
 	steady_state_correct = 0
@@ -48,6 +66,7 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 	# Define cross-validation parameters
 	skf = KFold(n_splits = len(subject_data), shuffle = True)
 
+	# Define PCA parameters
 	scale = preprocessing.StandardScaler()
 	pca = PCA()
 	scale_PCA = Pipeline([('norm',scale),('dimred',pca)])
@@ -57,13 +76,14 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 	elif CLASSIFIER == 'SVM':
 		model = SVC(kernel = 'linear', C = 10)
 
-	# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
 	accuracies =[]
 	ss_accuracies=[]
 	tr_accuracies=[]
 	subject_numb = []
 
 	i = 0
+
+	# main training/testing loop
 	for train_index, test_index in skf.split(subject_data):
 
 		print("**************FOLD {}*********".format(i+1))
@@ -109,16 +129,14 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 			model.fit(feats_train_norm, y_train)
 			y_pred = model.predict(feats_test_norm)
 
-
+		# append model performance metrics
 		correct = (y_pred==np.array(y_test)).sum().item()
 		tot = len(y_test)
 		steady_state_correct = (np.logical_and(y_pred==np.array(y_test), types_test == 1)).sum().item()
 		tot_steady_state = (types_test == 1).sum().item()
 		transitional_correct = (np.logical_and(y_pred==np.array(y_test), types_test == 0)).sum().item()
 		tot_transitional = (types_test == 0).sum().item()
-
 		accuracies.append(accuracy_score(y_test, y_pred))
-
 
 		tot_acc = correct/tot
 		ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
@@ -133,19 +151,12 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 		print("Total correct: {}, number: {}, accuracy: {}".format(correct,tot,tot_acc))
 		print("Steady-state correct: {}, number: {}, accuracy: {}".format(steady_state_correct,tot_steady_state,ss_acc))
 		print("Transistional correct: {}, number: {}, accuracy: {}".format(transitional_correct,tot_transitional,tr_acc))
-		# print(accuracy_score(y_test, y_pred))
 
 		i +=1
 	print('********************SUMMARY*****************************')
-	# print('Accuracy_total:', correct/len(BIO_train))
 	print('Accuracy_,mean:', np.mean(accuracies),'Accuracy_std: ', np.std(accuracies))
 	print('SR Accuracy_,mean:', np.mean(ss_accuracies),'Accuracy_std: ', np.std(ss_accuracies))
 	print('TR Accuracy_,mean:', np.mean(tr_accuracies),'Accuracy_std: ', np.std(tr_accuracies))
-	# model.fit(X_train, y_train)
-	# total_accuracies = accuracies + ss_accuracies + tr_accuracies
-
-
-
 
 	print('writing...')
 	with open(RESULT_NAME, 'w') as f:
@@ -167,17 +178,34 @@ def run_classifier(mode='bilateral',classifier='LDA',sensor=["imu","emg","goin"]
 	f.close()
 
 
-classifiers=['LDA']
-# sensors=["emg"]
-sensors=["imu","emg","goin"]
-modes = ['bilateral']
-# modes = ['bilateral','ipsilateral','contralateral']
-for classifier in classifiers:
-	for i in range(3,4):
-		for combo in combinations(sensors,i):
-			sensor = [item for item in combo]
-			for mode in modes:
-				print(classifier, sensor, mode)
-				run_classifier(mode=mode,classifier=classifier,sensor=sensor)
+"""This block parses command line arguments and runs the main code"""
+p = argparse.ArgumentParser()
+p.add_argument("--classifiers", default="LDA", help="classifier types: LDA, SVM")
+p.add_argument("--sensors", nargs="+", default=["imu","emg","gon"], help="select combinations of sensor modality types: img, emg, gonio")
+p.add_argument("--all_comb", dest='all_comb', action='store_true', help="loop through all combinations")
+p.add_argument("--laterality", default='bilateral', type=str, help="select laterality types, bilateral, ipsilateral, contralateral")
+p.add_argument("--data_skip", dest='data_saving', action='store_false', help="skip the dataset saving/loading")
+
+args = p.parse_args()
+
+p.set_defaults(data_saving=True)
+p.set_defaults(all_comb=False)
+
+comb_number = len(args.sensors)
+
+if args.all_comb:
+	print('looping through all combinations, overriding sensor selection')
+	args.sensors = ["imu","emg","gon"]
+	comb_number = 1
+
+for i in range(comb_number,4):
+	print('Number of sensors range:' , i ,'to',len(args.sensors))
+	for combo in combinations(args.sensors,i):
+		sensor = [item for item in combo]
+		print("Classifer type: ", args.classifiers)
+		print("Sensor modality: ", sensor)
+		print("Sensor laterality: ", args.laterality)
+
+		run_classifier(args)
 
 
