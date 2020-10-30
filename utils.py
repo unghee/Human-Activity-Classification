@@ -22,7 +22,7 @@ import pdb
 import time
 
 class trainclass():
-	def __init__(self,model,optimizer,databool,device,criterion,model_name,args):
+	def __init__(self,model,optimizer,databool,device,criterion,model_name,args=None):
 		self.model = model
 		self.optimizer = optimizer
 		self.data_bool = databool

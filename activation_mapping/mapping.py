@@ -14,7 +14,7 @@ from mask_net import FigureNetwork
 ########## SETTINGS  ########################
 BAND=10
 HOP=10
-sensors=["imu","emg","goin"]
+sensors=["imu","emg","gon"]
 MODE = ['bilateral']
 ############################################
 
