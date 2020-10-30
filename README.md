@@ -28,18 +28,31 @@ There are different classifiers and configuration types provided in this reposit
 ### Classifier type
 There are three classifier types:
 1. CNN-based spectrogram classifier (Frequency-Encoding, our method)
+Within CNN based classifiers, you can select between our NN model (LIRNET) and Resnet18. You can select this by passing `--nn_architecture` and specifiy the model you want to use. 
+For example,
+```
+python3 Freq-Encoding/freq_encoding_train.py --nn_architecture LIRNET
+```
+
 2. Feature-based classifiers (Heuristic)
 Among Feature-based classifiers you can choose either `LDA` or `SVM` by specifiying the classifiers within the function parameter `classifier` in `def run_classifier`.
 3. Random Classifier. 
 
 
 ### Configuration type
-There are two configuration type: 1. Generic 2. Mode-specific. To change this, change the parameter "CLASSIFIER" within the respective file.
+There are two configuration type: 1. Generic 2. Mode-specific. To select the type, pass agrument `--mode_specific` for CNN based classifiers and random classifiers. For example
+```
+ python3 Freq-Encoding/freq_encoding_train.py --mode_specific
+```
+For Heuristic machine learning models (SVM, LDA) you can select the type by running different files. For example, to run mode specific Heuristic ML model, you can run 
+```
+ python3 Heuristic/train_lda_mode.py
+```
 
 ### Cross Validation type (subject dependencies)
 There are two cross-validation type: 1. Subject Independent, 2. Subject Dependent (Leave-one-out cross validation).
 
-You can choose which classifier and configuration to use by running different python files.
+You can choose which classifier and configuration to use by running different python files (files end with loo, which stands for leave-one-out cross validation, is subject independent type).
 ```
 python3 [Classifier Type]/[Classifier Configuration]_[Subject Dependedcy].py
 ```
@@ -51,7 +64,7 @@ For example, Frequency-Encoding (spectrogram) type and generic configuration and
 python3 Freq-Encoding/train_freq_loo.py
 ```
 ### Laterality and Modality
-The laterlity and modality can be chosen changing the parameter `modes` and `sensors` in `def run_classifier`. User can specifiy one of three types of laterality `bilateral`,`ipsilateral`,`contralateral` and different combniations of sensor modalities `imu`,`emg`,`goin`.
+The laterlity and modality can be chosen by passing argments through `--laterality` and `--sensors`. User can specifiy one of three types of laterality `bilateral`,`ipsilateral`,`contralateral` and different combniations of sensor modalities `imu`,`emg`,`goin`.
 
 ## Implementing Custom Dataset
 The general outline to creating your own PyTorch Dataset can be found [here](https://pytorch.org/tutorials/beginner/data_loading_tutorial.html). In order for the Dataset to interface with a particular classifier and configuration, the \__getitem__ method must return a tuple containing some or all of the following:
