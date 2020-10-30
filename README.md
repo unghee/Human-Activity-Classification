@@ -74,6 +74,13 @@ The general outline to creating your own PyTorch Dataset can be found [here](htt
 3. SteadyStateFlag: 1 when current label matches label of previous data point. 0 if they differ. Used for transitional vs steady-state accuracy analysis.
 4. PreviousLabel: Only implemented for Mode-specific configurations or Random classifiers. Label of previous data point.
 
+## Analyis
+Statistical Analysis for the machine learning models used in this project. 
+
+## Activation Mapping
+Generates activation map of the LIRNET. Please refer to this [document](https://github.com/unghee/Human-Activity-Classification/tree/master/activation_mapping).
+
+
 ## Authors
 Ung Hee Lee
 Mechanical Engineering
