@@ -106,7 +106,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	# BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],data_range=(1, 50),bands=10,hop_length=10,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
 	BIO_train= EnableDataset(subject_list= ['156'],data_range=(1, 2),bands=10,hop_length=10,model_type='CNN')
 
-	INPUT_NUM=BIO_train.input_numb
+	INPUT_NUM=BIO_train.in_channels
 	
 	# with open('BIO_train_melspectro_500s_bands_16_hop_length_27.pkl', 'rb') as input:
 	#     BIO_train = pickle.load(input)
@@ -153,7 +153,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 			print("Class {} accuracy: {}".format(i, class_accs[i]/numfolds))
 
 
-	model.load_state_dict(torch.load('./models/bestmodel_BATCH_SIZE32_LR1e-05_WD0.001_EPOCH200_BAND10_HOP10.pth', map_location='cpu'))
+	model.load_state_dict(torch.load('./models/Freq-Encoding/bestmodel_BATCH_SIZE32_LR1e-05_WD0.001_EPOCH200_BAND10_HOP10.pth', map_location='cpu'))
 
 	def normalize_output(img):
 		if img.min()==0 and img.max() ==0:
@@ -311,7 +311,6 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	f.close()
 
 # Code for the different subgroups
-
 sensors=["imu","emg","goin"]
 
 run_classifier(mode='bilateral',classifier='CNN',sensor=sensors)
