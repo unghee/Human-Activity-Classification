@@ -1,8 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-
 from tqdm import tqdm # Displays a progress bar
-
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.metrics import accuracy_score
@@ -11,20 +9,25 @@ from sklearn import preprocessing
 from sklearn.decomposition import PCA, sparse_encode
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
-
+from itertools import combinations
 import pickle
 import os, sys
+import argparse
 sys.path.append('.')
-
 from dataset import EnableDataset
 from utils import *
 
-from itertools import combinations
-
-
 def run_classifier(args):
+	"""
+	Main function runs training and testing of Heuristic based machine
+	learning models (SVM, LDA)
 
-	########## PRAMETER SETTINGS  ########################
+	Input: argument passes through argparse. Each argument is described
+	in the --help of each arguments.
+	Output: No return, but generates a .txt file results of testing
+	including accuracy of the models.
+	"""
+	########## PRAMETER SETTINGS  ##############
 	MODE = args.laterality
 	CLASSIFIER = args.classifiers
 	SENSOR = args.sensors
@@ -42,6 +45,7 @@ def run_classifier(args):
 	if not os.path.exists('./checkpoints/'+CLASSIFIER):
 		os.makedirs('./checkpoints/'+CLASSIFIER)
 
+	# Loading/saving the ENABL3S dataset
 	if args.data_saving:
 		print("Loading datasets...")
 		BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],model_type=CLASSIFIER,sensors=SENSOR,mode=MODE)
@@ -50,7 +54,6 @@ def run_classifier(args):
 		with open(SAVE_NAME, 'rb') as input:
 			BIO_train = pickle.load(input)
 
-	# BIO_train= EnableDataset(subject_list= ['156'])
 	wholeloader = DataLoader(BIO_train, batch_size=len(BIO_train))
 
 	correct=0
@@ -59,14 +62,11 @@ def run_classifier(args):
 	transitional_correct = 0
 	tot_transitional = 0
 
-
 	# Define cross-validation parameters
 	numfolds = 10
 	skf = KFold(n_splits = numfolds, shuffle = True)
-	# skf = StratifiedKFold(n_splits = numfolds, shuffle = True)
 
-
-
+	# Define PCA parameters
 	scale = preprocessing.StandardScaler()
 	pca = PCA()
 	scale_PCA = Pipeline([('norm',scale),('dimred',pca)])
@@ -81,12 +81,13 @@ def run_classifier(args):
 	elif CLASSIFIER == 'SVM':
 		model = SVC(kernel = 'linear', C = 10)
 
-	# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
 	accuracies =[]
 	ss_accuracies=[]
 	tr_accuracies=[]
 
 	i = 0
+
+	# main training/testing loop
 	for train_index, test_index in skf.split(X, y, types):
 
 		print("**************FOLD {}*********".format(i+1))
@@ -118,13 +119,13 @@ def run_classifier(args):
 			model.fit(feats_train_norm, y_train)
 			y_pred = model.predict(feats_test_norm)
 
+		# append model performance metrics
 		correct = (y_pred==np.array(y_test)).sum().item()
 		tot = len(y_test)
 		steady_state_correct = (np.logical_and(y_pred==np.array(y_test), types_test == 1)).sum().item()
 		tot_steady_state = (types_test == 1).sum().item()
 		transitional_correct = (np.logical_and(y_pred==np.array(y_test), types_test == 0)).sum().item()
 		tot_transitional = (types_test == 0).sum().item()
-
 		accuracies.append(accuracy_score(y_test, y_pred))
 		
 		tot_acc = correct/tot
@@ -146,6 +147,7 @@ def run_classifier(args):
 	print('SR Accuracy_,mean:', np.mean(ss_accuracies),'Accuracy_std: ', np.std(ss_accuracies))
 	print('TR Accuracy_,mean:', np.mean(tr_accuracies),'Accuracy_std: ', np.std(tr_accuracies))
 
+	# writing to .txt file
 	print('writing...')
 	with open(RESULT_NAME, 'w') as f:
 		f.write('total ')
@@ -163,8 +165,6 @@ def run_classifier(args):
 
 
 """This block parses command line arguments and runs the main code"""
-import argparse
-
 p = argparse.ArgumentParser()
 p.add_argument("--classifiers", default="LDA", help="classifier types: LDA, SVM")
 p.add_argument("--sensors", nargs="+", default=["imu","emg","gon"], help="select combinations of sensor modality types: img, emg, gonio")

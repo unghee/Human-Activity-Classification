@@ -1,30 +1,33 @@
 import torch
 from torch.utils.data import Dataset, DataLoader, ConcatDataset, TensorDataset
-
 from tqdm import tqdm # Displays a progress bar
-
-
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-
-
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.decomposition import PCA, sparse_encode
 from sklearn import preprocessing
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
-
+from itertools import combinations
 import pickle
+import argparse
 import sys,os
 sys.path.append('.')
 from utils import *
 from dataset import EnableDataset
 
-from itertools import combinations
-
 def run_classifier(args):
-	########## PRAMETER SETTINGS  ########################
+	"""
+	Main function runs training and testing of Heuristic based machine
+	learning models (SVM, LDA)
+
+	Input: argument passes through argparse. Each argument is described
+	in the --help of each arguments.
+	Output: No return, but generates a .txt file results of testing
+	including accuracy of the models.
+	"""
+	########## PRAMETER SETTINGS  ###############
 	MODE = args.laterality
 	CLASSIFIER = args.classifiers
 	SENSOR = args.sensors
@@ -42,8 +45,7 @@ def run_classifier(args):
 	if not os.path.exists('./checkpoints/'+CLASSIFIER):
 			os.makedirs('./checkpoints/'+CLASSIFIER)
 
-	## for N way classifieres
-	numb_class= [5,2,2,2,2]
+	numb_class= [5,2,2,2,2] # Define output class number for each mode classifiers 
 	len_class = len(numb_class)
 	len_phase = 4
 	BIO_trains=[]
@@ -52,8 +54,8 @@ def run_classifier(args):
 
 	k = 0
 	subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
-	# subjects = ['156']
 
+	# Loading/saving the ENABL3S dataset
 	if args.data_saving:
 		for i in range(1,len_class+1):
 			for j in range(1,len_phase+1):
@@ -68,7 +70,6 @@ def run_classifier(args):
 	else:	
 		with open(SAVE_NAME, 'rb') as input:
 			 BIO_trains = pickle.load(input)
-
 
 	models=[]
 	tot=0
@@ -85,10 +86,9 @@ def run_classifier(args):
 				model = SVC(kernel = 'linear', C = 10)
 			models.append(model)
 
-
 	k =0
 
-
+	# initialize variables for model performance metric
 	accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
 	ss_accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
 	tr_accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
@@ -98,19 +98,21 @@ def run_classifier(args):
 	tot_numb_mat = np.zeros((10,20))
 	ss_numb_mat = np.zeros((10,20))
 	tr_numb_mat = np.zeros((10,20))
-
-
 	tot_mat = np.zeros((10,20))
 	ss_mat = np.zeros((10,20))
 	tr_mat = np.zeros((10,20))
 
 	# Define cross-validation parameters
 	numfolds = 10
-	# kf = KFold(n_splits = numfolds, shuffle = True)
 	skf = KFold(n_splits = numfolds, shuffle = True)
 
 	data_lens=0
 
+	"""
+	main testing/training loop of mode-specific classifiers. 
+	Separate classifiers for each activity classes (LW,RA,RD,SA,SD) 
+	and phase (Right left toe off/heel contact)
+	"""
 	for i in range(1, len_class+1):
 		for j in range(1,len_phase+1):
 			print("**************mode #", i, "****phase", j)
@@ -119,13 +121,10 @@ def run_classifier(args):
 			pca = PCA()
 			scale_PCA = Pipeline([('norm',scale),('dimred',pca)])
 
-			# print("TRAIN:", len(train_index), "TEST:", len(test_index), 'percentage', len(test_index)/len(train_index))
-
 			m = 0
 
 			for train_index, test_index in skf.split(BIO_trains[k]):
-				# print(train_index,test_index)
-				# print("######################Fold:{}#####################".format(m+1))
+
 				subject_data=BIO_trains[k] 
 				train_set = [subject_data[i] for i in train_index]
 				test_set = [subject_data[i] for i in test_index]
@@ -142,10 +141,12 @@ def run_classifier(args):
 
 				BIO_test = torch.utils.data.ConcatDataset(test_set)
 				wholeloader = DataLoader(BIO_test, batch_size=len(BIO_test))
+
 				for batch, label, dtype in tqdm(wholeloader, disable=args.progressbar):
 					X_test = batch
 					y_test = label
 					types_test = dtype
+
 				BIO_test = None
 				test_set = None
 
@@ -210,28 +211,9 @@ def run_classifier(args):
 
 	print('total number of classifiers: ' ,k)
 	print('total number of data: ' ,data_lens )
-	# print('Accuracy_total:', correct/BIO_trains_len)
-	# print('Steady-state:', steady_state_correct/tot_steady_state )
-	# print('Transistional:', transitional_correct/tot_transitional)
-
 	print('Accuracy_total:', np.mean(accuracies))
 	print('Steady-state:', np.mean(ss_accuracies) )
 	print('Transistional:', np.mean(tr_accuracies))
-
-
-
-	# print('writing...')
-	# accuracies = np.asarray(accuracies)
-
-	# with open(RESULT_NAME, 'w') as f:
-	# 	for row in accuracies:
-	# 		for items in row:
-	# 			for item in items:
-	# 				f.write("%s" % item)
-	# 				f.write(' ')
-	# 			f.write("\n")
-	# f.close()
-
 
 	print('writing...')
 	with open(RESULT_NAME, 'w') as f:
@@ -250,8 +232,6 @@ def run_classifier(args):
 
 
 """This block parses command line arguments and runs the main code"""
-import argparse
-
 p = argparse.ArgumentParser()
 p.add_argument("--classifiers", default="LDA", help="classifier types: LDA, SVM")
 p.add_argument("--sensors", nargs="+", default=["imu","emg","gon"], help="select combinations of sensor modality types: img, emg, gonio")

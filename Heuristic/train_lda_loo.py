@@ -1,18 +1,10 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-
 from tqdm import tqdm # Displays a progress bar
-
 import sys,os
-sys.path.append('.')
-from utils import *
-
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from dataset import EnableDataset
-
 import pickle
-
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, StratifiedKFold,train_test_split, cross_val_score
 from sklearn import preprocessing
@@ -20,12 +12,24 @@ from sklearn.decomposition import PCA, sparse_encode
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 import os
-
 from itertools import combinations
+import argparse
+
+sys.path.append('.')
+from utils import *
+from dataset import EnableDataset
 
 def run_classifier(args):
+	"""
+	Main function runs training and testing of Heuristic based machine
+	learning models (SVM, LDA)
 
-	########## PRAMETER SETTINGS  ########################
+	Input: argument passes through argparse. Each argument is described
+	in the --help of each arguments.
+	Output: No return, but generates a .txt file results of testing
+	including accuracy of the models.
+	"""
+	########## PRAMETER SETTINGS  ##############
 	MODE = args.laterality
 	CLASSIFIER = args.classifiers
 	SENSOR = args.sensors
@@ -43,6 +47,7 @@ def run_classifier(args):
 	subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
 	subject_data = []
 
+	# Loading/saving the ENABL3S dataset
 	if args.data_saving:
 		print("Loading datasets...")
 		for subject in subjects:
@@ -61,6 +66,7 @@ def run_classifier(args):
 	# Define cross-validation parameters
 	skf = KFold(n_splits = len(subject_data), shuffle = True)
 
+	# Define PCA parameters
 	scale = preprocessing.StandardScaler()
 	pca = PCA()
 	scale_PCA = Pipeline([('norm',scale),('dimred',pca)])
@@ -70,13 +76,14 @@ def run_classifier(args):
 	elif CLASSIFIER == 'SVM':
 		model = SVC(kernel = 'linear', C = 10)
 
-	# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
 	accuracies =[]
 	ss_accuracies=[]
 	tr_accuracies=[]
 	subject_numb = []
 
 	i = 0
+
+	# main training/testing loop
 	for train_index, test_index in skf.split(subject_data):
 
 		print("**************FOLD {}*********".format(i+1))
@@ -122,16 +129,14 @@ def run_classifier(args):
 			model.fit(feats_train_norm, y_train)
 			y_pred = model.predict(feats_test_norm)
 
-
+		# append model performance metrics
 		correct = (y_pred==np.array(y_test)).sum().item()
 		tot = len(y_test)
 		steady_state_correct = (np.logical_and(y_pred==np.array(y_test), types_test == 1)).sum().item()
 		tot_steady_state = (types_test == 1).sum().item()
 		transitional_correct = (np.logical_and(y_pred==np.array(y_test), types_test == 0)).sum().item()
 		tot_transitional = (types_test == 0).sum().item()
-
 		accuracies.append(accuracy_score(y_test, y_pred))
-
 
 		tot_acc = correct/tot
 		ss_acc = steady_state_correct/tot_steady_state if tot_steady_state != 0 else "No steady state samples used"
@@ -146,7 +151,6 @@ def run_classifier(args):
 		print("Total correct: {}, number: {}, accuracy: {}".format(correct,tot,tot_acc))
 		print("Steady-state correct: {}, number: {}, accuracy: {}".format(steady_state_correct,tot_steady_state,ss_acc))
 		print("Transistional correct: {}, number: {}, accuracy: {}".format(transitional_correct,tot_transitional,tr_acc))
-		# print(accuracy_score(y_test, y_pred))
 
 		i +=1
 	print('********************SUMMARY*****************************')
@@ -175,8 +179,6 @@ def run_classifier(args):
 
 
 """This block parses command line arguments and runs the main code"""
-import argparse
-
 p = argparse.ArgumentParser()
 p.add_argument("--classifiers", default="LDA", help="classifier types: LDA, SVM")
 p.add_argument("--sensors", nargs="+", default=["imu","emg","gon"], help="select combinations of sensor modality types: img, emg, gonio")

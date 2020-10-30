@@ -1,29 +1,32 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-
 from tqdm import tqdm # Displays a progress bar
-
-
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-
-
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.decomposition import PCA, sparse_encode
 from sklearn import preprocessing
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
-
+from itertools import combinations
+import argparse
 import sys,os
 sys.path.append('.')
 from utils import *
 from dataset import EnableDataset
 
-from itertools import combinations
-
 def run_classifier(args):
-	########## PRAMETER SETTINGS  ########################
+	"""
+	Main function runs training and testing of Heuristic based machine
+	learning models (SVM, LDA)
+
+	Input: argument passes through argparse. Each argument is described
+	in the --help of each arguments.
+	Output: No return, but generates a .txt file results of testing
+	including accuracy of the models.
+	"""
+	########## PRAMETER SETTINGS  ##############
 	MODE = args.laterality
 	CLASSIFIER = args.classifiers
 	SENSOR = args.sensors
@@ -42,21 +45,19 @@ def run_classifier(args):
 	if not os.path.exists('./checkpoints/'+CLASSIFIER):
 		os.makedirs('./checkpoints/'+CLASSIFIER)
 
-	## for N way classifieres
-	numb_class= [5,2,2,2,2]
+	numb_class= [5,2,2,2,2] # Define output class number for each mode classifiers 
 	len_class = len(numb_class)
 	len_phase = 4
 	BIO_trains=[]
-
 	BIO_trains_len=0
 
+	# Loading/saving the ENABL3S dataset
 	print("Loading datasets...")
 	if args.data_saving:
 		k = 0
 		for i in range(1,len_class+1):
 			for j in range(1,len_phase+1):
 				BIO_trains.append(EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194'],phaselabel=j,prevlabel=i,model_type='LDA',sensors=SENSOR,mode=MODE))
-				# BIO_trains_len += len(BIO_trains[k])
 				k +=1
 		save_object(BIO_trains,SAVE_NAME)
 	else:
@@ -70,7 +71,6 @@ def run_classifier(args):
 		for j in range(1,len_phase+1):
 			BIO_trains_len += len(BIO_trains[k])
 			wholeloaders.append(DataLoader(BIO_trains[k],batch_size=len(BIO_trains[k])))
-			# print(k)
 			k +=1
 
 	models=[]
@@ -88,7 +88,6 @@ def run_classifier(args):
 				model = SVC(kernel = 'linear', C = 10)
 			models.append(model)
 
-
 	k =0
 
 	accuracies=[[[] for x in range(len_phase)]for y in range(len_class)]
@@ -105,9 +104,13 @@ def run_classifier(args):
 
 	# Define cross-validation parameters
 	numfolds = 10
-	# kf = KFold(n_splits = numfolds, shuffle = True)
 	skf = StratifiedKFold(n_splits = numfolds, shuffle = True)
 
+	"""
+	main testing/training loop of mode-specific classifiers. 
+	Separate classifiers for each activity classes (LW,RA,RD,SA,SD) 
+	and phase (Right left toe off/heel contact)
+	"""
 	for i in range(1, len_class+1):
 		for j in range(1,len_phase+1):
 			print("**************mode #", i, "****phase", j)
@@ -121,8 +124,6 @@ def run_classifier(args):
 			scale = preprocessing.StandardScaler()
 			pca = PCA()
 			scale_PCA = Pipeline([('norm',scale),('dimred',pca)])
-		
-			# print("TRAIN:", len(train_index), "TEST:", len(test_index), 'percentage', len(test_index)/len(train_index))
 
 			m = 0
 			for train_index, test_index in skf.split(X, y, types):
@@ -154,6 +155,7 @@ def run_classifier(args):
 					models[k].fit(feats_train_norm,y_train)
 					y_pred=models[k].predict(feats_test_norm)
 
+				# append model performance metrics
 				correct = (y_pred==np.array(y_test)).sum().item()
 				tot = len(y_test)
 				steady_state_correct = (np.logical_and(y_pred==np.array(y_test), types_test == 1)).sum().item()
@@ -173,21 +175,6 @@ def run_classifier(args):
 				ss_mat[m,k] = steady_state_correct
 				tr_mat[m,k] = transitional_correct
 
-				# ss_accuracies[i-1][j-1].append(ss_acc) if tot_steady_state != 0 else "No steady state samples used"
-				# tr_accuracies[i-1][j-1].append(tr_acc) if tot_transitional != 0 else "No transitional samples used"
-				# accuracies[i-1][j-1].append(accuracy_score(y_test, y_pred))
-
-				# tot_corrects[i-1][j-1].append(correct)
-				# steady_state_corrects[i-1][j-1].append(steady_state_correct) if tot_steady_state != 0 else "No steady state samples used"
-				# transitional_corrects[i-1][j-1].append(transitional_correct) if tot_transitional != 0 else "No transitional samples used"
-
-
-				# print(accuracy_score(y_test, y_pred))
-				# print("Total accuracy: {}".format(accuracy_score(y_test, y_pred)))
-				# print("Total correct: {}, number: {}, accuracy: {}".format(correct,tot,tot_acc))
-				# print("Steady-state correct: {}, number: {}, accuracy: {}".format(steady_state_correct,tot_steady_state,ss_acc))
-				# print("Transistional correct: {}, number: {}, accuracy: {}".format(transitional_correct,tot_transitional,tr_acc))
-				# print(accuracy_score(y_test, y_pred))		
 				m +=1
 			k +=1
 			del pca, X_train, X_test, y_train, y_test
@@ -203,15 +190,11 @@ def run_classifier(args):
 
 	print('total number of classifiers: ' ,k)
 	print('total number of data: ' ,BIO_trains_len)
-	# print('Accuracy_total:', correct/BIO_trains_len)
-	# print('Steady-state:', steady_state_correct/tot_steady_state )
-	# print('Transistional:', transitional_correct/tot_transitional)
-
 	print('Accuracy_total:', np.mean(accuracies))
 	print('Steady-state:', np.mean(ss_accuracies) )
 	print('Transistional:', np.mean(tr_accuracies))
 
-
+	# writing to .txt file
 	print('writing...')
 	with open(RESULT_NAME, 'w') as f:
 		f.write('total ')
@@ -228,8 +211,6 @@ def run_classifier(args):
 	f.close()
 
 """This block parses command line arguments and runs the main code"""
-import argparse
-
 p = argparse.ArgumentParser()
 p.add_argument("--classifiers", default="LDA", help="classifier types: LDA, SVM")
 p.add_argument("--sensors", nargs="+", default=["imu","emg","gon"], help="select combinations of sensor modality types: img, emg, gonio")
