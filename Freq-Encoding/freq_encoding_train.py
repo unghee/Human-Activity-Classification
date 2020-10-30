@@ -8,10 +8,8 @@ from torch import optim
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset
-
 from sklearn.model_selection import KFold, StratifiedKFold,ShuffleSplit ,train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
-
 from PIL import Image
 import pickle
 from itertools import combinations
@@ -19,17 +17,24 @@ import copy
 import os
 import random
 import sys,os
+import argparse
 sys.path.append('.')
-
 from utils import *
 from networks import *
 from dataset import EnableDataset
 
 
-
 def run_classifier(args):
+	"""
+	Main function runs training and testing of neural network models (LIR-Net, RESNET18).
+	This code runs subject dependent configuration. 
 
-	########## PRAMETER SETTINGS  ########################
+	Input: argument passes through argparse. Each argument is described
+	in the --help of each arguments.
+	Output: No return, but generates a .txt file results of testing
+	including accuracy of the models.
+	"""
+	########## PRAMETER SETTINGS  ##############
 	BATCH_SIZE = args.batch_size
 	LEARNING_RATE = args.lr
 	WEIGHT_DECAY = args.weight_decay
@@ -72,9 +77,10 @@ def run_classifier(args):
 
 	spectrogramTime = 0.0
 
+
+	# Load the dataset and train, val, test splits
+	print("Loading datasets...")
 	if args.data_saving:
-		# Load the dataset and train, val, test splits
-		print("Loading datasets...")
 		BIO_train= EnableDataset(subject_list= ['156','185','186','188','189','190', '191', '192', '193', '194']  \
 			,data_range=(1, 51),bands=BAND,hop_length=HOP,model_type=CLASSIFIER,sensors=SENSOR,mode=MODE,mode_specific = MODE_SPECIFIC_BOOL)
 		spectrogramTime += BIO_train.avgSpectrogramTime
@@ -89,6 +95,7 @@ def run_classifier(args):
 	device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 	print('GPU USED?',torch.cuda.is_available())
 
+	# Choose NN models to train/test on.
 	if MODE_SPECIFIC_BOOL:
 		model = Network_modespecific(IN_CHANNELS,NUMB_CLASS)
 	else: 
@@ -104,13 +111,14 @@ def run_classifier(args):
 
 	model = model.to(device)
 
+	# set model training parameters
 	criterion = nn.CrossEntropyLoss()
 	optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 	num_epoch = NUB_EPOCH
 
+	# initialize weights of the NN models
 	init_state = copy.deepcopy(model.state_dict())
 	init_state_opt = copy.deepcopy(optimizer.state_dict())
-
 
 	if MODE_SPECIFIC_BOOL:
 		one_hot_embed= torch.eye(5)
@@ -119,7 +127,6 @@ def run_classifier(args):
 			y = label
 			types = dtype
 			prevlabel = prevlabels
-
 	else:
 		for batch, label, dtype in tqdm(wholeloader,disable=args.progressbar):
 			X = batch
@@ -134,11 +141,10 @@ def run_classifier(args):
 	inferenceTime = 0.0
 	class_acc_list=[]
 
-
+	# main training/testing loop
 	if args.val_on:
-
+		# 8:1:1 split for validation
 		train_class=trainclass(model,optimizer,args.progressbar,device,criterion,MODEL_NAME,args)
-
 
 		numfolds = 1
 
@@ -166,8 +172,8 @@ def run_classifier(args):
 
 		inferenceTime += inf_time
 
-
 	else:
+		# k-fold validation
 		skf = KFold(n_splits = numfolds, shuffle = True)
 		i = 0
 
@@ -253,15 +259,10 @@ def run_classifier(args):
 		for items in confusion:
 			for item in items:
 				f.write("%s " % item)
-
 			f.write('\n')
 	f.close()
 
-
-
 """This block parses command line arguments and runs the main code"""
-import argparse
-
 p = argparse.ArgumentParser()
 p.add_argument("--classifiers", default="CNN", help="classifier types: CNN")
 p.add_argument("--sensors", nargs="+", default=["imu","emg","gon"], help="select combinations of sensor modality types: img, emg, gonio")

@@ -8,34 +8,32 @@ from torch import optim
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, Subset, DataLoader, random_split, TensorDataset, ConcatDataset
-
 import pickle
-
 from sklearn.model_selection import KFold, StratifiedKFold,ShuffleSplit ,train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
-
 from PIL import Image
-
-
 import copy
 import os
 import random
-
-
 import sys,os
 sys.path.append('.')
-# sys.path.append('../')
 from utils import *
 from networks import *
 from dataset import EnableDataset
-
 from itertools import combinations
-
-import pdb
+import argparse
 
 
 def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"],NN_model=None):
+	"""
+	Main function runs training and testing of neural network models (LIR-Net, RESNET18).
+	This code runs subject independent configuration. 
 
+	Input: argument passes through argparse. Each argument is described
+	in the --help of each arguments.
+	Output: No return, but generates a .txt file results of testing
+	including accuracy of the models.
+	"""
 	########## PRAMETER SETTINGS  ########################
 	BATCH_SIZE = args.batch_size
 	LEARNING_RATE = args.lr
@@ -68,13 +66,14 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	else:
 		RESULT_NAME= './results/'+CLASSIFIER+'/'+CLASSIFIER + NN_model+'_'+MODE+'_'+sensor_str+'_BATCH_SIZE'+str(BATCH_SIZE)+'_LR'+str(LEARNING_RATE)+'_WD'+str(WEIGHT_DECAY)+'_EPOCH'+str(NUB_EPOCH)+'_BAND'+str(BAND)+'_HOP'+str(HOP)+'_subjects_accuracy.txt'
 
-	# Load the dataset and train, val, test splits
-	print("Loading datasets...")
 
 	subjects = ['156','185','186','188','189','190', '191', '192', '193', '194']
 
 	spectrogramTime = 0.0
 
+
+	# Load the dataset and train, val, test splits
+	print("Loading datasets...")
 	if args.data_saving:
 		subject_data = []
 		for subject in subjects:
@@ -93,6 +92,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	device = "cuda" if torch.cuda.is_available() else "cpu" # Configure device
 	print('GPU USED?',torch.cuda.is_available())
 
+	# Choose NN models to train/test on.
 	if MODE_SPECIFIC_BOOL:
 		model = Network_modespecific(IN_CHANNELS,NUMB_CLASS)
 	else:
@@ -132,7 +132,9 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	preds=[]
 	inferenceTime = 0.0
 
+	# main training/testing loop
 	for train_index, test_index in skf.split(subject_data):
+		# k-fold validation
 		print('training subject No.:', train_index, ' Testing subject No.:',test_index)
 
 		model.load_state_dict(init_state)
@@ -208,9 +210,9 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 
 		del  test_dataset, train_dataset, trainloader, testloader
 
-
 		i +=1
 
+	# Write results to text files
 	print('writing...')
 	with open(RESULT_NAME, 'w') as f:
 		f.write('subject_numb ')
@@ -256,10 +258,7 @@ def run_classifier(mode='bilateral',classifier='CNN',sensor=["imu","emg","goin"]
 	print('result saved in', RESULT_NAME)
 
 
-
 """This block parses command line arguments and runs the main code"""
-import argparse
-
 p = argparse.ArgumentParser()
 p.add_argument("--classifiers", default="CNN", help="classifier types: CNN")
 p.add_argument("--sensors", nargs="+", default=["imu","emg","gon"], help="select combinations of sensor modality types: img, emg, gonio")
