@@ -35,7 +35,7 @@ python3 Freq-Encoding/freq_encoding_train.py --nn_architecture LIRNET
 ```
 
 2. Feature-based classifiers (Heuristic)
-Among Feature-based classifiers you can choose either `LDA` or `SVM` by specifiying the classifiers within the function parameter `classifier` in `def run_classifier`.
+Among Feature-based classifiers you can choose either `LDA` or `SVM` by specifiying the classifiers by passing the argument `--classifiers` in files under `/Heuristic`.
 3. Random Classifier. 
 
 
