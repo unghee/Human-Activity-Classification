@@ -1,5 +1,9 @@
 # Activation Mapping
 
+## How to run
+1. run `mask_gen.py`
+2. run `mapping.py`
+
 ## mask_net.py
 
 In this file, we create two different instances of our original network, modified so that we can glean activation information. The first, "Network" only runs the first convolutional layer so that we can use it to create an activation mask in mask_gen.py. Note that we only use the first conv layer, as using the second one results in figures that are too coarse to be useful. "FigureNetwork" simply returns x, as well as the activations after the first convolutional layer, so we can use it to find maximal activations per channel.
