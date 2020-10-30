@@ -90,4 +90,6 @@ Electrical and Computer Engineering
 University of Michigan
 bijustin@umich.edu
 
+---
+We welcome feedbacks for improving our code. Feel free to submit any issues or ask any questions.
 
